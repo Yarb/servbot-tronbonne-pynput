@@ -101,6 +101,12 @@ async def unregister(websocket):
             await notify_users()
             break
 
+def check_client(websocket):
+    for client in USERS:
+        if client[0] == websocket:
+            return True
+    return False
+
 
 async def counter(websocket, path):
     # register(websocket) sends user_event() to websocket
@@ -108,14 +114,23 @@ async def counter(websocket, path):
         await websocket.send(state_event())
         async for message in websocket:
             data = json.loads(message)
-            if data["action"] in BUTTONSTATE:
-                BUTTONSTATE[data["action"]] = data["value"]
-                await notify_state()
-            elif data["action"] == "login":
-                if data["token"] == TOKEN and data["user"]:
-                    await register(websocket, data["user"])
+            
+            # If websocket registered - check commands
+            if check_client(websocket):
+                # check token
+                if data["token"] == TOKEN:
+                    # check command
+                    if data["action"] in BUTTONSTATE:
+                        BUTTONSTATE[data["action"]] = data["value"]
+                        await notify_state()          
+            # else check login
             else:
-                logging.error("unsupported event: {}", data)
+                if data["action"] == "login":
+                    if data["token"] == TOKEN and data["user"]:
+                        await register(websocket, data["user"])
+                else:
+                    logging.error("unsupported event: {}", data)            
+            
     finally:
         await unregister(websocket)
 

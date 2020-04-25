@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>I am Tron Bonne, be afraid, be very afraid!</title>
+        <style type="text/css">
+            body {
+                font-family: "Courier New", sans-serif;
+                text-align: center;
+            }
+            .buttons {
+                font-size: 1em;
+                display: none;
+                justify-content: center;
+            }
+            .button, .value {
+                line-height: 1;
+                padding: 1rem;
+                margin: 1rem;
+                border: medium solid;
+                min-height: 1em;
+                min-width: 1em;
+            }
+            .button {
+                cursor: pointer;
+                user-select: none;
+            }
+            .value {
+                min-width: 2em;
+            }
+            .state {
+                display: block;
+                font-size: 1em;
+            }
+            .keystate {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="keystate">
+            Virtual Keyboard: <span class="keystate">Not logged in</span>
+        </div>
+        <div class="buttons">
+            <button onclick="enableKeys()">Enable keys</button>
+            <button onclick="disableKeys()">Disable keys</button>
+        </div>
+        
+        <div class="state">
+            Users: <span class="users">Not logged in</span>
+        </div>
+		<div class="login">
+			<form action="javascript:;" onsubmit="connect()">
+				Username: <input type=text id="username"><br>
+				Admin token:   <input type=text id="Secret"><br>
+				<input type=submit value="Connect">
+			</form>
+        </div>
+        <script>
+            var value = document.querySelector('.value'),
+                users = document.querySelector('.users'),
+                keystate = document.querySelector('.keystate'),
+                buttons = document.querySelector('.buttons'),
+                keysEnable = document.querySelector('.enable_button'),
+                keysDisable = document.querySelector('.disable_button'),
+                login = document.querySelector('.login'),
+                token = "",
+                
+                //websocket = new WebSocket("ws://82.130.61.194:6789/"),
+                websocket = new WebSocket("ws://localhost:6789/");
+                
+            enableKeys = function () {
+                if (users.textContent !== 'Not logged in') {
+                    console.log(JSON.stringify({action: 'Enable',token: token}))
+                    websocket.send(JSON.stringify({action: 'Enable',token: token}));
+                }
+            }
+            
+            disableKeys = function () {
+                if (users.textContent !== 'Not logged in') {
+                    websocket.send(JSON.stringify({action: 'Disable',token: token}));
+                }
+            }
+            
+            
+            connect = function () {
+                name = document.querySelector('#username').value;
+                secret = document.querySelector('#Secret').value;
+                console.log("Form returned:");
+                console.log(name + ' ' + secret);
+                token = secret;
+                websocket.send(JSON.stringify({action: 'ADMIN', user: name, token: token}));
+			}
+            
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                switch (data.type) {
+                    case 'keystate':
+                        console.log("Data : " + data.value)
+                        if (data.value) {
+                            keystate.textContent = "ENABLED"
+                        }else {
+                            keystate.textContent = "DISABLED"
+                        }
+                        break;
+                    case 'users':
+                        text = "";
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (i == 0) {
+                                text += data.value[i].toString();
+                            }else {
+                                text += " , "  + data.value[i].toString();
+                            }
+                        }
+                        login.style.display = "none";
+                        keystate.style.display = "block";
+                        buttons.style.display = "block";
+                        users.textContent = (text);
+                        break;
+                    default:
+                        console.error(
+                            "unsupported event", data);
+                }
+            };
+        </script>
+    </body>
+</html>

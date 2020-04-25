@@ -40,14 +40,16 @@
     </head>
     <body>
         <div class="buttons">
-            <div class="up button">U</div>
-            <div class="down button">D</div>
-            <div class="left button">L</div>
-            <div class="right button">R</div>
-            <div class="hkick button">hK</div>
-            <div class="lkick button">lK</div>
-            <div class="hpunch button">hP</div>
-            <div class="lpunch button">lP</div>
+            <div class="up button">^^</div>
+            <div class="down button">vv</div>
+            <div class="left button"><<</div>
+            <div class="right button">>></div>
+            <div class="A button">A</div>
+            <div class="B button">B</div>
+            <div class="C button">C</div>
+            <div class="X button">X</div>
+            <div class="Y button">Y</div>
+            <div class="Z button">Z</div>
         </div>
         <div class="state">
             Users: <span class="users">Not logged in</span>
@@ -55,28 +57,21 @@
 		<div class="login">
 			<form action="javascript:;" onsubmit="connect()">
 				Username: <input type=text id="username"><br>
-				Session token:   <input type=text id="Secret"><br>
+				Secret:   <input type=text id="Secret"><br>
 				<input type=submit value="Connect">
 			</form>
         </div>
         <script>
-            var up = document.querySelector('.up'),
-                down = document.querySelector('.down'),
-                left = document.querySelector('.up'),
-                right = document.querySelector('.right'),
-                hpunch = document.querySelector('.hpunch'),
-                lpunch = document.querySelector('.lpunch'),
-                hkick = document.querySelector('.hkick'),
-                lkick = document.querySelector('.lkick'),
-                value = document.querySelector('.value'),
+            var value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
                 login = document.querySelector('.login'),
                 token = "",
                 
+                //websocket = new WebSocket("ws://82.130.61.194:6789/"),
                 websocket = new WebSocket("ws://localhost:6789/"),
                 
                 buttons = ["up", "down", "left", "right", 
-                           "hpunch", "lpunch", "hkick", "lkick"];
+                           "A","B","C","X","Y","Z"];
             
             connect = function () {
                 name = document.querySelector('#username').value;
@@ -98,7 +93,6 @@
             for (let j = 0; j < buttons.length; j++) {
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
                     if (users.textContent !== 'Not logged in') {
-                        console.log(JSON.stringify({action: buttons[j], value: 1, token : token}));
                         websocket.send(JSON.stringify({action: buttons[j], value: 1, token : token}));
                     }
                 }

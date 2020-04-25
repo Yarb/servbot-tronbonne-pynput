@@ -16,7 +16,7 @@ import random
 
 import argparse
 
-from pynput.keyboard import Key, Controller
+from pynput.keyboard import Controller
 
 output_keyboard = Controller()
 
@@ -63,7 +63,7 @@ keylist = ['w','s','a','d','r','t','y','u']
 def keypresser(keys):
   for i in range(len(keylist)):
     output_keyboard.release(keylist[i])
-    if keys[i] is '1':
+    if keys[i] == 1:
       print(keylist[i])
       output_keyboard.press(keylist[i])
 

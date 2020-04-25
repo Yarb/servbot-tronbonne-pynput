@@ -35,19 +35,23 @@ IP = args.ip
 PORT = args.port
 KEY_OUTPUT = args.output
 
+ADMIN_ENABLE = {"value": False}
+
 # Simple random token generator
-def random_token():
+def random_token(value):
     a = ""
-    for i in range(4):
+    for i in range(value):
         a += str(random.randint(0,9))
     return a
 
 USERS1 = set()
 USERS2 = set()
+ADMIN = set()
 
-# generate two tokens
-TOKEN1 = random_token()
-TOKEN2 = random_token()
+# generate three tokens
+TOKEN1 = random_token(4)
+TOKEN2 = random_token(4)
+ADMIN_TOKEN = random_token(5)
 
 # Button list. TODO: Make this easier to modify
 KEYLIST_PLAYER1 = ['w','s','a','d','r','t','y','u','i','o']
@@ -95,10 +99,12 @@ def keypresser(keys, player):
       print(keylist[i])
       output_keyboard.press(keylist[i])
 
+
 def state_event(statelist, player):
-    if (KEY_OUTPUT):
+    if (KEY_OUTPUT and ADMIN_ENABLE["value"]):
         keypresser(list(statelist.values()), player)
     return json.dumps({"type": "state", "value": list(statelist.values())})
+
 
 
 # Generate JSON of all users in given list
@@ -122,8 +128,10 @@ async def notify_state(player):
             message = state_event(BUTTONSTATE2, 2)
             await asyncio.wait([user.send(message) for user, username in USERS2])
 
-
-
+async def notify_admin():
+    if ADMIN:
+        message = json.dumps({"type": "keystate", **ADMIN_ENABLE})
+        await asyncio.wait([user.send(message) for user, username in ADMIN])
 
 async def register(websocket, user, userlist):
     userlist.add((websocket, user))
@@ -166,6 +174,16 @@ async def server(websocket, path):
                     if data["action"] in BUTTONSTATE2:
                         BUTTONSTATE2[data["action"]] = data["value"]
                         await notify_state(2)
+            elif check_client(websocket, ADMIN):
+                if data["token"] == ADMIN_TOKEN:
+                    # check command
+                    if data["action"] == "Enable":
+                        ADMIN_ENABLE["value"] = True
+                        await notify_admin()
+                        
+                    elif data["action"] == "Disable":
+                        ADMIN_ENABLE["value"] = False
+                        await notify_admin()
             # else check login 
             else:
                 if data["action"] == "login":
@@ -173,12 +191,16 @@ async def server(websocket, path):
                         await register(websocket, data["user"], USERS1)
                     elif data["token"] == TOKEN2 and data["user"]:
                         await register(websocket, data["user"], USERS2)
+                elif data["action"] == "ADMIN" and data["token"] == ADMIN_TOKEN:
+                    await register(websocket, data["user"], ADMIN)
+                    await notify_admin()
                 else:
                     logging.error("unsupported event: {}", data)
 
     finally:
         if not await unregister(websocket, USERS1):
-            await unregister(websocket, USERS2)
+            if not await unregister(websocket, USERS2):
+                await unregister(websocket, ADMIN)
 
 
 start_server = websockets.serve(server, IP, PORT)
@@ -190,6 +212,9 @@ else:
     print("Connection testing mode. Virtual keyboard is DISABLED.")
 
 print("\nServbot running at: \n" + IP + ":" + str(PORT))
+print("---")
+print("ADMIN token is: " + ADMIN_TOKEN)
+print("\n")
 print("Player 1 session token is: " + TOKEN1)
 print("Player 2 session token is: " + TOKEN2)
 print("\n---\n")

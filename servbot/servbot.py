@@ -83,9 +83,9 @@ BUTTONSTATE2 = {"up": 0,
 
 def keypresser(keys, player):
   if player == 1:
-    keylist == KEYLIST_PLAYER1
+    keylist = KEYLIST_PLAYER1
   elif player == 2:
-    keylist == KEYLIST_PLAYER2
+    keylist = KEYLIST_PLAYER2
   else:
     return
 
@@ -94,7 +94,6 @@ def keypresser(keys, player):
     if keys[i] == 1:
       print(keylist[i])
       output_keyboard.press(keylist[i])
-
 
 def state_event(statelist, player):
     if (KEY_OUTPUT):

@@ -55,7 +55,7 @@
 		<div class="login">
 			<form action="javascript:;" onsubmit="connect()">
 				Username: <input type=text id="username"><br>
-				Secret:   <input type=text id="Secret"><br>
+				Session token:   <input type=text id="Secret"><br>
 				<input type=submit value="Connect">
 			</form>
         </div>
@@ -71,7 +71,10 @@
                 value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
                 login = document.querySelector('.login'),
-                websocket = new WebSocket("ws://127.0.0.1:6789/"),
+                token = "",
+                
+                websocket = new WebSocket("ws://localhost:6789/"),
+                
                 buttons = ["up", "down", "left", "right", 
                            "hpunch", "lpunch", "hkick", "lkick"];
             
@@ -80,13 +83,14 @@
                 secret = document.querySelector('#Secret').value;
                 console.log("Form returned:");
                 console.log(name + ' ' + secret);
-                websocket.send(JSON.stringify({action: 'login', user: name, token: secret}));
+                token = secret;
+                websocket.send(JSON.stringify({action: 'login', user: name, token: token}));
 			}
             
             for (let j = 0; j < buttons.length; j++) {
                 document.querySelector("." + buttons[j]).onmouseup = function (event) {
                     if (users.textContent !== 'Not logged in') {
-                        websocket.send(JSON.stringify({action: buttons[j], value: 0}));
+                        websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
                     }
                 }
             }
@@ -94,7 +98,8 @@
             for (let j = 0; j < buttons.length; j++) {
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
                     if (users.textContent !== 'Not logged in') {
-                        websocket.send(JSON.stringify({action: buttons[j], value: 1}));
+                        console.log(JSON.stringify({action: buttons[j], value: 1, token : token}));
+                        websocket.send(JSON.stringify({action: buttons[j], value: 1, token : token}));
                     }
                 }
             }

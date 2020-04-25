@@ -121,10 +121,17 @@ async def counter(websocket, path):
 
 
 start_server = websockets.serve(counter, IP, PORT)
-print("Server running at: " + IP + ":" + str(PORT))
-print("Session password is: " + TOKEN)
+print("\n---\n")
+
 if (KEY_OUTPUT):
     print("Virtual keyboard is ACTIVE.")
+else:
+    print("Connection testing mode. Virtual keyboard is DISABLED.")
+
+print("\nServbot running at: \n" + IP + ":" + str(PORT))
+print("Session password is: " + TOKEN)
+print("\n---\n")
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
+

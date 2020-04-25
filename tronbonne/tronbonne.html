@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebSocket demo</title>
+        <style type="text/css">
+            body {
+                font-family: "Courier New", sans-serif;
+                text-align: center;
+            }
+            .buttons {
+                font-size: 3em;
+                display: flex;
+                justify-content: center;
+            }
+            .button, .value {
+                line-height: 1;
+                padding: 1rem;
+                margin: 1rem;
+                border: medium solid;
+                min-height: 1em;
+                min-width: 1em;
+            }
+            .button {
+                cursor: pointer;
+                user-select: none;
+            }
+            .minus {
+                color: red;
+            }
+            .plus {
+                color: green;
+            }
+            .value {
+                min-width: 2em;
+            }
+            .state {
+                font-size: 2em;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="buttons">
+            <div class="up button">U</div>
+            <div class="down button">D</div>
+            <div class="left button">L</div>
+            <div class="right button">R</div>
+            <div class="hkick button">hK</div>
+            <div class="lkick button">lK</div>
+            <div class="hpunch button">hP</div>
+            <div class="lpunch button">lP</div>
+        </div>
+        <div class="state">
+            Users: <span class="users">Not logged in</span>
+        </div>
+		<div class="login">
+			<form action="javascript:;" onsubmit="connect()">
+				Username: <input type=text id="username"><br>
+				Secret:   <input type=text id="Secret"><br>
+				<input type=submit value="Connect">
+			</form>
+        </div>
+        <script>
+            var up = document.querySelector('.up'),
+                down = document.querySelector('.down'),
+                left = document.querySelector('.up'),
+                right = document.querySelector('.right'),
+                hpunch = document.querySelector('.hpunch'),
+                lpunch = document.querySelector('.lpunch'),
+                hkick = document.querySelector('.hkick'),
+                lkick = document.querySelector('.lkick'),
+                value = document.querySelector('.value'),
+                users = document.querySelector('.users'),
+                login = document.querySelector('.login'),
+                websocket = new WebSocket("ws://127.0.0.1:6789/"),
+                buttons = ["up", "down", "left", "right", 
+                           "hpunch", "lpunch", "hkick", "lkick"];
+            
+            connect = function () {
+                name = document.querySelector('#username').value;
+                secret = document.querySelector('#Secret').value;
+                console.log("Form returned:");
+                console.log(name + ' ' + secret);
+                websocket.send(JSON.stringify({action: 'login', user: name, token: secret}));
+			}
+            
+            for (let j = 0; j < buttons.length; j++) {
+                document.querySelector("." + buttons[j]).onmouseup = function (event) {
+                    if (users.textContent !== 'Not logged in') {
+                        websocket.send(JSON.stringify({action: buttons[j], value: 0}));
+                    }
+                }
+            }
+            
+            for (let j = 0; j < buttons.length; j++) {
+                document.querySelector("." + buttons[j]).onmousedown = function (event) {
+                    if (users.textContent !== 'Not logged in') {
+                        websocket.send(JSON.stringify({action: buttons[j], value: 1}));
+                    }
+                }
+            }
+
+            
+            
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                switch (data.type) {
+                    case 'state':
+                        console.log("Data : " + data.value)
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (data.value[i]) {
+                                document.querySelector('.' + buttons[i]).style.color = "red";
+                            } else {
+                                document.querySelector('.' + buttons[i]).style.color = "black";
+                            }
+                        }
+                        break;
+                    case 'users':
+                        text = "";
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (i == 0) {
+                                text += data.value[i].toString();
+                            }else {
+                                text += " , "  + data.value[i].toString();
+                            }
+                        }
+                        login.style.display = "none";
+                        users.textContent = (text);
+                        break;
+                    default:
+                        console.error(
+                            "unsupported event", data);
+                }
+            };
+        </script>
+    </body>
+</html>

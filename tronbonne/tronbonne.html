@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>WebSocket demo</title>
+        <title>I am Tron Bonne, be afraid, be very afraid!</title>
         <style type="text/css">
             body {
                 font-family: "Courier New", sans-serif;
@@ -36,6 +36,9 @@
             .state {
                 font-size: 2em;
             }
+            .error {
+                color: red;
+            }
         </style>
     </head>
     <body>
@@ -52,7 +55,9 @@
             <div class="Z button">Z</div>
         </div>
         <div class="state">
-            Users: <span class="users">Not logged in</span>
+            <span class="users">Not logged in</span>
+        </div>
+        <div class="error">
         </div>
 		<div class="login">
 			<form action="javascript:;" onsubmit="connect()">
@@ -62,13 +67,16 @@
 			</form>
         </div>
         <script>
+            const ADDRESS = "ws://localhost:6789/";
+        
             var value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
                 login = document.querySelector('.login'),
+                error = document.querySelector('.error'),
                 token = "",
+                state = [0,0,0,0,0,0,0,0,0,0,0,0],
                 
-                //websocket = new WebSocket("ws://82.130.61.194:6789/"),
-                websocket = new WebSocket("ws://localhost:6789/"),
+                websocket = new WebSocket(ADDRESS),
                 
                 buttons = ["up", "down", "left", "right", 
                            "A","B","C","X","Y","Z"];
@@ -82,18 +90,28 @@
                 websocket.send(JSON.stringify({action: 'login', user: name, token: token}));
 			}
             
-            for (let j = 0; j < buttons.length; j++) {
-                document.querySelector("." + buttons[j]).onmouseup = function (event) {
-                    if (users.textContent !== 'Not logged in') {
-                        websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
-                    }
-                }
-            }
             
             for (let j = 0; j < buttons.length; j++) {
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
-                    if (users.textContent !== 'Not logged in') {
+                    if (users.textContent !== 'Please type your name and given session key') {
                         websocket.send(JSON.stringify({action: buttons[j], value: 1, token : token}));
+                        state[j] = 1;
+                    }
+                }
+                document.querySelector("." + buttons[j]).onmouseout = function (event) {
+                    if (users.textContent !== 'Please type your name and given session key') {
+                        if (state[j] === 1){
+                            websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                            state[j] = 0;
+                        }
+                    }
+                }
+                document.querySelector("." + buttons[j]).onmouseup = function (event) {
+                    if (users.textContent !== 'Please type your name and given session key') {
+                        if (state[j] === 1){
+                            websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                            state[j] = 0;
+                        }
                     }
                 }
             }
@@ -129,6 +147,16 @@
                         console.error(
                             "unsupported event", data);
                 }
+            };
+            websocket.onclose = function (event) {
+                console.log('Connection closed');
+                login.style.display = "block";
+                users.textContent = "Connection closed, another servbot gone...";
+                websocket = new WebSocket(ADDRESS);
+            };
+            websocket.onerror = function(evt) {
+                error.textContent = "Connection error, try refresh";
+                console.log(evt);
             };
         </script>
     </body>

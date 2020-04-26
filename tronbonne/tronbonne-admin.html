@@ -9,7 +9,7 @@
             }
             .buttons {
                 font-size: 1em;
-                display: none;
+                display: block;
                 justify-content: center;
             }
             .button, .value {
@@ -32,21 +32,28 @@
                 font-size: 1em;
             }
             .keystate {
+                display: block;
+            }
+            .controls {
                 display: none;
+            }
+            td#key1 {
+                font-weight: bold;
+            }
+            td#key2 {
+                font-weight: bold;
+            }
+            .error {
+                color: red;
             }
         </style>
     </head>
     <body>
-        <div class="keystate">
-            Virtual Keyboard: <span class="keystate">Not logged in</span>
-        </div>
-        <div class="buttons">
-            <button onclick="enableKeys()">Enable keys</button>
-            <button onclick="disableKeys()">Disable keys</button>
-        </div>
-        
         <div class="state">
             Users: <span class="users">Not logged in</span>
+        </div>
+        <div class="error">
+            
         </div>
 		<div class="login">
 			<form action="javascript:;" onsubmit="connect()">
@@ -55,18 +62,86 @@
 				<input type=submit value="Connect">
 			</form>
         </div>
+        <div class="controls">
+            <table class="session1">
+                <tr>
+                    <th colspan="10">Session 1 status:</th>
+                </tr>
+                <tr>
+                    <td colspan = "5">Session token:</td>
+                    <td id="key1" colspan="5">-----</td>
+                </tr>
+                <tr id="buttons">
+                    <td class="up">UP</td>
+                    <td class="down">DWN</td>
+                    <td class="left">LFT</td>
+                    <td class="right">RGT</td>
+                    <td class="A">A</td>
+                    <td class="B">B</td>
+                    <td class="C">C</td>
+                    <td class="X">X</td>
+                    <td class="Y">Y</td>
+                    <td class="Z">Z</td>
+                <td>
+            </table>
+            <table class="session2">
+                <tr>
+                    <th colspan="10">Session 2 status:</th>
+                </tr>
+                <tr>
+                    <td colspan = "5">Session token:</td>
+                    <td id="key2" colspan="5">-----</td>
+                </tr>
+                <tr id="buttons">
+                    <td class="up">UP</td>
+                    <td class="down">DWN</td>
+                    <td class="left">LFT</td>
+                    <td class="right">RGT</td>
+                    <td class="A">A</td>
+                    <td class="B">B</td>
+                    <td class="C">C</td>
+                    <td class="X">X</td>
+                    <td class="Y">Y</td>
+                    <td class="Z">Z</td>
+                <td>
+            </table>
+            
+            
+            <div>
+                Virtual Keyboard: <span class="keystate">Not logged in</span>
+            </div>
+            <div>
+                <button onclick="enableKeys()">Enable keys</button>
+                <button onclick="disableKeys()">Disable keys</button>
+            </div>
+            <div>
+                <br>
+                Session reset. Type "Yes" to restart session: 
+                <input type=text id="confirm" value="No">
+                <button onclick="resetSession()">Reset</button>
+            </div>
+        </div>
         <script>
+            // Enter servbot ip address here
+            const ADDRESS = "ws://localhost:6789/"
+            
+            
             var value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
+                error = document.querySelector('.error'),
                 keystate = document.querySelector('.keystate'),
-                buttons = document.querySelector('.buttons'),
+                controls = document.querySelector('.controls'),
                 keysEnable = document.querySelector('.enable_button'),
                 keysDisable = document.querySelector('.disable_button'),
+                confirm = document.querySelector('#confirm'),
                 login = document.querySelector('.login'),
+                key1 = document.querySelector('#key1'),
+                key2 = document.querySelector('#key2'),
                 token = "",
-                
-                //websocket = new WebSocket("ws://82.130.61.194:6789/"),
-                websocket = new WebSocket("ws://localhost:6789/");
+                buttons = ["up", "down", "left", "right", 
+                           "A","B","C","X","Y","Z"],
+                s_id =[".session1 #buttons ", ".session2 #buttons "],           
+                websocket = new WebSocket(ADDRESS);
                 
             enableKeys = function () {
                 if (users.textContent !== 'Not logged in') {
@@ -81,6 +156,13 @@
                 }
             }
             
+            resetSession = function () {
+                if (confirm.value === "Yes"){
+                    console.log("Ded");
+                    websocket.send(JSON.stringify({action: 'KILL clients', token: token}));
+                }
+                confirm.value = "No";
+            }
             
             connect = function () {
                 name = document.querySelector('#username').value;
@@ -112,14 +194,38 @@
                             }
                         }
                         login.style.display = "none";
-                        keystate.style.display = "block";
-                        buttons.style.display = "block";
+                        controls.style.display = "block";
                         users.textContent = (text);
+                        break;
+                    case 'tokens':
+                        key1.textContent = data.value[0].toString();
+                        key2.textContent = data.value[1].toString();
+                        break;
+                    case 'state':
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (data.value[i]) {
+                                document.querySelector(s_id[data.id] + '.' + buttons[i]).style.backgroundColor = "cyan";
+                                
+                            } else {
+                                document.querySelector(s_id[data.id] + '.' + buttons[i]).style.backgroundColor = "white";
+                            }
+                        }
                         break;
                     default:
                         console.error(
                             "unsupported event", data);
                 }
+            };
+            websocket.onclose = function (event) {
+                console.log('Connection closed');
+                login.style.display = "block";
+                controls.style.display = "none";
+                users.textContent = "Connection closed";
+                websocket = new WebSocket(ADDRESS);
+            };
+            websocket.onerror = function(evt) {
+                users.textContent = "Connection error, try refresh";
+                console.log(evt);
             };
         </script>
     </body>

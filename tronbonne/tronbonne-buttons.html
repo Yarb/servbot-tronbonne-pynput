@@ -43,6 +43,9 @@
             td {
                 min-width: 80px;
             }
+            .error {
+                color: red;
+            }
         </style>
     </head>
     <body>
@@ -80,9 +83,6 @@
         </table>
         <h1>Glorious Tron Bonne control scheme!
         </h1>
-        <div class="state">
-            Players: <span class="users">Please type your name and given session key</span>
-        </div>
 		<div class="login">
 			<form action="javascript:;" onsubmit="connect()">
                 <table>
@@ -102,16 +102,23 @@
                 </table>
 			</form>
         </div>
+        <div class="state">
+            <span class="users">Please type your name and given session key</span>
+        </div>
+        <div class="error">
+        </div>
         
         <br>
         <script>
+            const ADDRESS = "ws://localhost:6789/";
             var value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
                 login = document.querySelector('.login'),
+                error = document.querySelector('.error'),
+                state = [0,0,0,0,0,0,0,0,0,0,0,0],
                 token = "",
                 
-                //websocket = new WebSocket("ws://82.130.61.194:6789/"),
-                websocket = new WebSocket("ws://localhost:6789/"),
+                websocket = new WebSocket(ADDRESS),
                 
                 buttons = ["up", "down", "left", "right", 
                            "A","B","C","X","Y","Z"];
@@ -131,16 +138,23 @@
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
                     if (users.textContent !== 'Please type your name and given session key') {
                         websocket.send(JSON.stringify({action: buttons[j], value: 1, token : token}));
+                        state[j] = 1;
                     }
                 }
                 document.querySelector("." + buttons[j]).onmouseout = function (event) {
                     if (users.textContent !== 'Please type your name and given session key') {
-                        websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                        if (state[j] === 1){
+                            websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                            state[j] = 0;
+                        }
                     }
                 }
                 document.querySelector("." + buttons[j]).onmouseup = function (event) {
                     if (users.textContent !== 'Please type your name and given session key') {
-                        websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                        if (state[j] === 1){
+                            websocket.send(JSON.stringify({action: buttons[j], value: 0, token : token}));
+                            state[j] = 0;
+                        }
                     }
                 }
             }
@@ -176,6 +190,16 @@
                         console.error(
                             "unsupported event", data);
                 }
+            };
+            websocket.onclose = function (event) {
+                console.log('Connection closed');
+                login.style.display = "block";
+                users.textContent = "Connection closed, another servbot gone...";
+                websocket = new WebSocket(ADDRESS);
+            };
+            websocket.onerror = function(evt) {
+                error.textContent = "Connection error, try refresh";
+                console.log(evt);
             };
         </script>
         <footer>

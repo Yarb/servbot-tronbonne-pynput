@@ -36,6 +36,6 @@ Have fun - Johan Strandman
 
 Acknowledgements:
 -
- -OptimusDu at OpenGameArt.org for creating neat arcade button sprites.
- -Fellows at Triforce for providing inspiration.
- -Ichinen Miura, Yasunori Iwasaki and Kohei Tanaka for providing soundtrack for coding
+ - OptimusDu at OpenGameArt.org for creating neat arcade button sprites.
+ - Fellows at Triforce for providing inspiration.
+ - Ichinen Miura, Yasunori Iwasaki and Kohei Tanaka for providing soundtrack for coding

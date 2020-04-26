@@ -1,12 +1,11 @@
 # servbot-tronbonne
-Description: Simple WebSocket solution for sharing a controller(emulated keyboard) over Internet.
+Simple WebSocket solution for sharing a controller(emulated keyboard) to multiple players over Internet.
 
 
 Servbot:
 -
 The Websocket server that Tronbonne-clients connect to. Includes a virtual keyboard mechanism to output given commands to game or whatnot.
-Note that using the virtual keyboard basically exposes it to the wonders of Internet and security is basically non-existent in this simple version. Take necessary precautions.
-Currently access to server is verified by simple login token. If you plan to use this in something more permanent, improve upon this (for instance, by passing the token with every keypress event, not just on login.) 
+Note that using the virtual keyboard basically exposes it to the wonders of Internet and security is basically non-existent in this simple version. Take necessary precautions. 
 
 Tronbonne:
 -
@@ -27,5 +26,10 @@ Run the Servbot with:
 For additional commands, including enabling the virtual keyboard,  run:
 `python3 servbot.py -h`
 
+Upon running, the servbot generates and provides you with tokens that can be used to access the server.
+Simply enter one of these tokens to Tronbonne along with a cool playername and you are good to go.
+For deployment over Internet, modify the Tronbonne webpage to contain the correct address for the server.
+
+There is also a simple admin interface used to remotely enable/disable the virtual keyboard.
 
 Have fun - Johan Strandman

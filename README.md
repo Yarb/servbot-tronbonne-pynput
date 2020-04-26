@@ -33,3 +33,9 @@ For deployment over Internet, modify the Tronbonne webpage to contain the correc
 There is also a simple admin interface used to remotely enable/disable the virtual keyboard.
 
 Have fun - Johan Strandman
+
+Acknowledgements:
+-
+OptimusDu at OpenGameArt.org for creating neat arcade button sprites.
+Fellows at Triforce for providing inspiration.
+Ichinen Miura, Yasunori Iwasaki and Kohei Tanaka for providing soundtrack for coding

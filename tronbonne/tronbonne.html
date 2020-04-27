@@ -148,14 +148,14 @@
                             "unsupported event", data);
                 }
             };
-            websocket.onclose = function (event) {
+            window.websocket.onclose = function (event) {
                 console.log('Connection closed');
-                login.style.display = "block";
+                login.style.display = "none";
                 users.textContent = "Connection closed, another servbot gone...";
-                websocket = new WebSocket(ADDRESS);
             };
-            websocket.onerror = function(evt) {
+            window.websocket.onerror = function(evt) {
                 error.textContent = "Connection error, try refresh";
+                login.style.display = "none";
                 console.log(evt);
             };
         </script>

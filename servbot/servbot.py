@@ -118,15 +118,26 @@ def state_event(statelist, player):
 
 # Generate JSON of all users in given list
 def users_event(userlist):
-    return json.dumps({"type": "users", "value": [i for h,i in userlist]})
-
-# Send notification to given userlist
+    if userlist is USERS1:
+        id = 1
+    elif userlist is USERS2:
+        id = 2
+    else: 
+        id = 0
+    users = [" "]
+    if userlist:
+        users = [i for h,i in userlist]
+    return json.dumps({"type": "users", "value": users, "id":id})
+        
+# Send notification to given userlist and to admins
 async def notify_users(userlist):
+    message = users_event(userlist)
     if userlist:  # asyncio.wait doesn't accept an empty list
-        message = users_event(userlist)
         await asyncio.wait([user.send(message) for user, username in userlist])
+    if ADMIN:
+        await asyncio.wait([user.send(message) for user, username in ADMIN])
 
-# Notify given userlist of events
+# Notify given userlist of events, send monitoring data to admins
 async def notify_state(player):
     if player == 1:
         if USERS1:  # asyncio.wait doesn't accept an empty list
@@ -139,20 +150,24 @@ async def notify_state(player):
     if ADMIN and message:
         await asyncio.wait([user.send(message) for user, username in ADMIN])
 
+# Send the virtual keyboard state to admins
 async def notify_admin():
     if ADMIN:
         message = json.dumps({"type": "keystate", **ADMIN_ENABLE})
         await asyncio.wait([user.send(message) for user, username in ADMIN])
-        
+
+# Send the session tokens to admins        
 async def send_admin_tokens():
     if ADMIN:
-        message = json.dumps({"type": "tokens", "value": [token1, token2]})
+        message = json.dumps({"type": "tokens", "value": [token1, token2, ADMIN_TOKEN]})
         await asyncio.wait([user.send(message) for user, username in ADMIN])
 
+# Register websocket
 async def register(websocket, user, userlist):
     userlist.add((websocket, user))
     await notify_users(userlist)
 
+# Remove registered websocket
 async def unregister(websocket, userlist):
     for client in userlist:
         if client[0] == websocket:
@@ -160,24 +175,29 @@ async def unregister(websocket, userlist):
             await notify_users(userlist)
             return True
     return False
-
+            
+# Check if websocket exists in given userlist
 def check_client(websocket, userlist):
     for client in userlist:
         if client[0] == websocket:
             return True
     return False
 
+# Restart the session. This removes all the users except for admins
+# and generates new set of session tokens
 async def restart_session():
     while USERS1:
         client = USERS1.pop()
-        await unregister(client[0], USERS1)
         await client[0].close()
     while USERS2:
         client = USERS2.pop()
-        await unregister(client[0], USERS2)
         await client[0].close()
+    await notify_users(USERS1)
+    await notify_users(USERS2)
     generate_tokens()
 
+
+# Main server loop
 async def server(websocket, path):
     # register(websocket) sends user_event() to websocket
     try:
@@ -219,22 +239,31 @@ async def server(websocket, path):
                         print_settings()
             # else check login 
             else:
+                # New websocket login
                 if data["action"] == "login":
                     if data["token"] == token1 and data["user"]:
                         await register(websocket, data["user"], USERS1)
                     elif data["token"] == token2 and data["user"]:
                         await register(websocket, data["user"], USERS2)
+
+                # New admin login
                 elif data["action"] == "ADMIN" and data["token"] == ADMIN_TOKEN:
                     await register(websocket, data["user"], ADMIN)
                     await notify_admin()
                     await send_admin_tokens()
+                    await notify_users(USERS1)
+                    await notify_users(USERS2)
+                    
+                # Something else, report.
                 else:
-                    logging.error("unsupported event: {}", data)
+                    logging.error("Token error or bad message", data)
 
     finally:
-        if not await unregister(websocket, USERS1):
-            if not await unregister(websocket, USERS2):
-                await unregister(websocket, ADMIN)
+            # Go throught the lists one y one and try to unregister the websocket
+            # This needs to be done in order, which is why it is done this way.
+            if not await unregister(websocket, USERS1):
+                if not await unregister(websocket, USERS2):
+                    await unregister(websocket, ADMIN)
 
 
 def print_settings():

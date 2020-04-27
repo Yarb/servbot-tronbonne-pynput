@@ -36,6 +36,11 @@
             }
             .controls {
                 display: none;
+                justify-content: center;
+            }
+            table {
+                justify-content: center;
+                display: flex;
             }
             td#key1 {
                 font-weight: bold;
@@ -45,6 +50,12 @@
             }
             .error {
                 color: red;
+            }
+            #users1 {
+                font-style: italic;
+            }
+            #users2 {
+                font-style: italic;
             }
         </style>
     </head>
@@ -63,15 +74,20 @@
 			</form>
         </div>
         <div class="controls">
+            <div>
+                <b>Admin key:</b> <div id="adminkey">---</div>
+            </div>
+            <hr>
             <table class="session1">
                 <tr>
-                    <th colspan="10">Session 1 status:</th>
+                    <th colspan="12">Session 1 status:</th>
                 </tr>
                 <tr>
-                    <td colspan = "5">Session token:</td>
-                    <td id="key1" colspan="5">-----</td>
+                    <td colspan = "6">Session token:</td>
+                    <td id="key1" colspan="6">-----</td>
                 </tr>
                 <tr id="buttons">
+                    <td></td>
                     <td class="up">UP</td>
                     <td class="down">DWN</td>
                     <td class="left">LFT</td>
@@ -82,17 +98,26 @@
                     <td class="X">X</td>
                     <td class="Y">Y</td>
                     <td class="Z">Z</td>
-                <td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="12">Users:</td>
+                </tr>
+                <tr>
+                    <td colspan="12" id="users1"></td>
+                </tr>
             </table>
+            <hr>
             <table class="session2">
                 <tr>
-                    <th colspan="10">Session 2 status:</th>
+                    <th colspan="12">Session 2 status:</th>
                 </tr>
                 <tr>
-                    <td colspan = "5">Session token:</td>
-                    <td id="key2" colspan="5">-----</td>
+                    <td colspan = "6">Session token:</td>
+                    <td id="key2" colspan="6">-----</td>
                 </tr>
                 <tr id="buttons">
+                    <td></td>
                     <td class="up">UP</td>
                     <td class="down">DWN</td>
                     <td class="left">LFT</td>
@@ -103,10 +128,16 @@
                     <td class="X">X</td>
                     <td class="Y">Y</td>
                     <td class="Z">Z</td>
-                <td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="12">Users:</td>
+                </tr>
+                <tr>
+                    <td colspan="12" id="users2"></td>
+                </tr>
             </table>
-            
-            
+            <hr>
             <div>
                 Virtual Keyboard: <span class="keystate">Not logged in</span>
             </div>
@@ -135,8 +166,11 @@
                 keysDisable = document.querySelector('.disable_button'),
                 confirm = document.querySelector('#confirm'),
                 login = document.querySelector('.login'),
+                adminKey = document.querySelector('#adminkey'),
                 key1 = document.querySelector('#key1'),
                 key2 = document.querySelector('#key2'),
+                users1 = document.querySelector('#users1'),
+                users2 = document.querySelector('#users2'),
                 token = "",
                 buttons = ["up", "down", "left", "right", 
                            "A","B","C","X","Y","Z"],
@@ -185,6 +219,7 @@
                         }
                         break;
                     case 'users':
+                        console.log(data);
                         text = "";
                         for (let i = 0; i < data.value.length; i++ ) {
                             if (i == 0) {
@@ -193,13 +228,21 @@
                                 text += " , "  + data.value[i].toString();
                             }
                         }
-                        login.style.display = "none";
-                        controls.style.display = "block";
-                        users.textContent = (text);
+                        if (data.id === 1) {
+                            users1.textContent = (text);
+                        }else if (data.id === 2) {
+                            users2.textContent = (text);
+                        }else {
+                            login.style.display = "none";
+                            controls.style.display = "block";
+                            users.textContent = (text);                                
+                        }
                         break;
+                    
                     case 'tokens':
                         key1.textContent = data.value[0].toString();
                         key2.textContent = data.value[1].toString();
+                        adminKey.textContent = data.value[2].toString();
                         break;
                     case 'state':
                         for (let i = 0; i < data.value.length; i++ ) {
@@ -218,10 +261,9 @@
             };
             websocket.onclose = function (event) {
                 console.log('Connection closed');
-                login.style.display = "block";
+                login.style.display = "none";
                 controls.style.display = "none";
                 users.textContent = "Connection closed";
-                websocket = new WebSocket(ADDRESS);
             };
             websocket.onerror = function(evt) {
                 users.textContent = "Connection error, try refresh";

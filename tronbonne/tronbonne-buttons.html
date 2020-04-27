@@ -142,7 +142,6 @@
             for (let j = 0; j < buttons.length; j++) {
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
                     if (login.style.display == "none") {
-                        console.log("plop")
                         window.websocket.send(JSON.stringify({action: buttons[j], value: 1, token : token}));
                         state[j] = 1;
                     }

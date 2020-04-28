@@ -42,6 +42,7 @@ args = parser.parse_args()
 IP = args.ip
 PORT = args.port
 KEY_OUTPUT = args.output
+ssl_state = False
 
 # SSL cert and key checking and loading
 if args.base_filename:
@@ -51,6 +52,7 @@ if args.base_filename:
         cert_pem = pathlib.Path(__file__).with_name(fn + ".crt")
         key = pathlib.Path(__file__).with_name(fn + ".key")
         ssl_context.load_cert_chain(cert_pem, keyfile=key)
+        ssl_state = True
     except FileNotFoundError:
         print("SSL init error:")
         print(fn + ".key and/or " + fn + ".crt not found in the same directory")
@@ -299,7 +301,11 @@ def print_settings():
     else:
         print("Connection testing mode. Virtual keyboard is DISABLED.")
 
-    print("\nServbot running at: \n" + IP + ":" + str(PORT))
+    print("\nServbot running at: " )
+    if ssl_state:
+        print("wss://" + IP + ":" + str(PORT))
+    else:
+        print("ws://" + IP + ":" + str(PORT))
     print("---")
     print("ADMIN token is: " + ADMIN_TOKEN)
     print("\n")
@@ -307,7 +313,7 @@ def print_settings():
     print("Player 2 session token is: " + token2)
     print("\n---\n")
 
-if cert_pem and key:
+if ssl_state:
     start_server = websockets.serve(server, IP, PORT, ssl=ssl_context)
 else:
     start_server = websockets.serve(server, IP, PORT)
@@ -318,4 +324,5 @@ print_settings()
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
+
 

@@ -14,6 +14,12 @@ import logging
 import websockets
 import random
 
+import ssl
+import pathlib
+
+
+
+
 import argparse
 
 from pynput.keyboard import Controller
@@ -29,12 +35,31 @@ parser.add_argument('-p', type=int, default=6789, dest='port',
                     help='Server port (default 6789).')
 parser.add_argument('-k', action='store_const',const=1 , metavar='', dest='output',
                     help='Output keypresses.')
+parser.add_argument('-S', dest='base_filename',
+                    help='Use SSL. Provide filename for .key and .crt files. Eg. "file" -> "file.crt" and "file.key".')
 
 args = parser.parse_args()
 IP = args.ip
 PORT = args.port
 KEY_OUTPUT = args.output
 
+# SSL cert and key checking and loading
+if args.base_filename:
+    fn = args.base_filename
+    try:
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        cert_pem = pathlib.Path(__file__).with_name(fn + ".crt")
+        key = pathlib.Path(__file__).with_name(fn + ".key")
+        ssl_context.load_cert_chain(cert_pem, keyfile=key)
+    except FileNotFoundError:
+        print("SSL init error:")
+        print(fn + ".key and/or " + fn + ".crt not found in the same directory")
+        exit(-1)
+    except ssl.SSLError:
+        print("SSL init error: Bad .key or .crt?")
+        exit(-1)
+        
+        
 ADMIN_ENABLE = {"value": False}
 
 USERS1 = set()
@@ -282,10 +307,15 @@ def print_settings():
     print("Player 2 session token is: " + token2)
     print("\n---\n")
 
+if cert_pem and key:
+    start_server = websockets.serve(server, IP, PORT, ssl=ssl_context)
+else:
+    start_server = websockets.serve(server, IP, PORT)
 
-start_server = websockets.serve(server, IP, PORT)
+
 
 print_settings()
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
+

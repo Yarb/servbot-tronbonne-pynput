@@ -23,6 +23,7 @@ import pathlib
 import argparse
 
 from pynput.keyboard import Controller
+from pynput.keyboard import Key
 
 output_keyboard = Controller()
 
@@ -37,7 +38,8 @@ parser.add_argument('-k', action='store_const',const=1 , metavar='', dest='outpu
                     help='Output keypresses.')
 parser.add_argument('-S', dest='base_filename',
                     help='Use SSL. Provide filename for .key and .crt files. Eg. "file" -> "file.crt" and "file.key".')
-
+parser.add_argument('-T', type = int, dest='keystrength',
+                    help='Enable stronger token system with given keylength. Admin will always be keylength + 2')
 args = parser.parse_args()
 IP = args.ip
 PORT = args.port
@@ -74,49 +76,49 @@ def random_token(value):
     for i in range(value):
         a += str(random.randint(0,9))
     return a
+    
+# Better random token generator
+def random_token2(value):
+    a = ""
+    for i in range(value):
+        if random.randint(0,1):
+            a += str(random.randint(0,9))
+        else:
+            # 97 for lower, 65 for uppercase
+            a += chr(65 + random.randint(0,25))
+    return a    
 
 def generate_tokens():
-    global token1, token2
-    token1 = random_token(4)
-    token2 = random_token(4)
+    global token1, token2, admin_token
+    if args.keystrength:
+        k_len = args.keystrength
+        token1 = random_token2(k_len)
+        token2 = random_token2(k_len)
+        admin_token = random_token2(k_len + 2)
+    else:
+        token1 = random_token(TOKEN_LENGHT)
+        token2 = random_token(TOKEN_LENGHT)
+        admin_token = random_token(TOKEN_LENGHT + 2)
     
 
 # Tokens
 token1 = ""
 token2 = ""
-ADMIN_TOKEN = random_token(5)
+admin_token = ""
+TOKEN_LENGHT = 5
 # Generate user tokens
 generate_tokens()
 
 
 # Button list. TODO: Make this easier to modify
-KEYLIST_PLAYER1 = ['w','s','a','d','r','t','y','u','i','o']
-KEYLIST_PLAYER2 = ['p','l','ö','ä','h','j','k','n','m',',']
+KEYLIST_PLAYER1 = ['w','s','a','d','r','t','y','u','i','o', Key.esc]
+KEYLIST_PLAYER2 = ['p','l','ö','ä','h','j','k','n','m',',', Key.esc]
 
-BUTTONSTATE1 = {"up": 0,
-               "down": 0,
-               "left": 0,
-               "right": 0,
-               "A": 0,
-               "B": 0,
-               "C": 0,
-               "X": 0,
-               "Y": 0,
-               "Z": 0
-               }
-
-BUTTONSTATE2 = {"up": 0,
-               "down": 0,
-               "left": 0,
-               "right": 0,
-               "A": 0,
-               "B": 0,
-               "C": 0,
-               "X": 0,
-               "Y": 0,
-               "Z": 0
-               }
-
+BUTTONSTATE = [{"up"   : 0, "down" : 0, "left" : 0, "right": 0, "A"    : 0, 
+                "B"    : 0, "C"    : 0, "X"    : 0, "Y"    : 0, "Z"    : 0, "esc"  : 0},
+               {"up"   : 0, "down" : 0, "left" : 0, "right": 0, "A"    : 0, 
+                "B"    : 0, "C"    : 0, "X"    : 0, "Y"    : 0, "Z"    : 0, "esc"  : 0}
+              ]
 
 
 
@@ -138,8 +140,8 @@ def keypresser(keys, player):
 
 def state_event(statelist, player):
     if (KEY_OUTPUT and ADMIN_ENABLE["value"]):
-        keypresser(list(statelist.values()), player)
-    return json.dumps({"type": "state", "value": list(statelist.values()), "id": player - 1})
+        keypresser(list(statelist[player - 1].values()), player)
+    return json.dumps({"type": "state", "value": list(statelist[player - 1].values()), "id": player - 1})
 
 
 
@@ -151,7 +153,7 @@ def users_event(userlist):
         id = 2
     else: 
         id = 0
-    users = [" "]
+    users = ["--"]
     if userlist:
         users = [i for h,i in userlist]
     return json.dumps({"type": "users", "value": users, "id":id})
@@ -166,15 +168,12 @@ async def notify_users(userlist):
 
 # Notify given userlist of events, send monitoring data to admins
 async def notify_state(player):
-    if player == 1:
-        if USERS1:  # asyncio.wait doesn't accept an empty list
-            message = state_event(BUTTONSTATE1, 1)
-            await asyncio.wait([user.send(message) for user, username in USERS1])
-    elif player == 2:
-        if USERS2:  # asyncio.wait doesn't accept an empty list
-            message = state_event(BUTTONSTATE2, 2)
-            await asyncio.wait([user.send(message) for user, username in USERS2])
-    if ADMIN and message:
+    message = state_event(BUTTONSTATE, player)
+    if USERS1 and player == 1:  # asyncio.wait doesn't accept an empty list
+        await asyncio.wait([user.send(message) for user, username in USERS1])
+    if USERS2 and player == 2:  # asyncio.wait doesn't accept an empty list
+        await asyncio.wait([user.send(message) for user, username in USERS2])
+    if ADMIN:
         await asyncio.wait([user.send(message) for user, username in ADMIN])
 
 # Send the virtual keyboard state to admins
@@ -186,7 +185,7 @@ async def notify_admin():
 # Send the session tokens to admins        
 async def send_admin_tokens():
     if ADMIN:
-        message = json.dumps({"type": "tokens", "value": [token1, token2, ADMIN_TOKEN]})
+        message = json.dumps({"type": "tokens", "value": [token1, token2, admin_token]})
         await asyncio.wait([user.send(message) for user, username in ADMIN])
 
 # Register websocket
@@ -231,24 +230,25 @@ async def server(websocket, path):
         #await websocket.send(state_event())
         async for message in websocket:
             data = json.loads(message)
-
+            if data["token"]:
+                data["token"] = data["token"].upper()
             # If websocket registered - check commands
             if check_client(websocket, USERS1):
                 # check token
                 if data["token"] == token1:
                     # check command
-                    if data["action"] in BUTTONSTATE1:
-                        BUTTONSTATE1[data["action"]] = data["value"]
+                    if data["action"] in BUTTONSTATE[0] and data["action"] != "esc":
+                        BUTTONSTATE[0][data["action"]] = data["value"]
                         await notify_state(1)
             elif check_client(websocket, USERS2):
                 # check token
                 if data["token"] == token2:
                     # check command
-                    if data["action"] in BUTTONSTATE2:
-                        BUTTONSTATE2[data["action"]] = data["value"]
+                    if data["action"] in BUTTONSTATE[1] and data["action"] != "esc":
+                        BUTTONSTATE[1][data["action"]] = data["value"]
                         await notify_state(2)
             elif check_client(websocket, ADMIN):
-                if data["token"] == ADMIN_TOKEN:
+                if data["token"] == admin_token:
                     # check command
                     if data["action"] == "Enable":
                         ADMIN_ENABLE["value"] = True
@@ -257,7 +257,14 @@ async def server(websocket, path):
                     elif data["action"] == "Disable":
                         ADMIN_ENABLE["value"] = False
                         await notify_admin()
-                        
+                    elif data["action"] == "btn1":
+                        if data["btn"] in BUTTONSTATE[0]:
+                            BUTTONSTATE[0][data["btn"]] = data["value"]
+                            await notify_state(1)
+                    elif data["action"] == "btn2":
+                        if data["btn"] in BUTTONSTATE[1]:
+                            BUTTONSTATE[1][data["btn"]] = data["value"]
+                            await notify_state(2)
                     elif data["action"] == "KILL clients":
                         print("Servbot, restarting session:")
                         await restart_session()
@@ -274,7 +281,7 @@ async def server(websocket, path):
                         await register(websocket, data["user"], USERS2)
 
                 # New admin login
-                elif data["action"] == "ADMIN" and data["token"] == ADMIN_TOKEN:
+                elif data["action"] == "ADMIN" and data["token"] == admin_token:
                     await register(websocket, data["user"], ADMIN)
                     await notify_admin()
                     await send_admin_tokens()
@@ -297,7 +304,7 @@ def print_settings():
     print("\n---\n")
 
     if (KEY_OUTPUT):
-        print("Virtual keyboard is ACTIVE.")
+        print("Virtual keyboard mode is enabled. Use the admin interface to activate output")
     else:
         print("Connection testing mode. Virtual keyboard is DISABLED.")
 
@@ -307,10 +314,12 @@ def print_settings():
     else:
         print("ws://" + IP + ":" + str(PORT))
     print("---")
-    print("ADMIN token is: " + ADMIN_TOKEN)
+    print("ADMIN token is: " + admin_token)
     print("\n")
     print("Player 1 session token is: " + token1)
     print("Player 2 session token is: " + token2)
+    print("\n")
+    print("Token verification is case insensitive")
     print("\n---\n")
 
 if ssl_state:

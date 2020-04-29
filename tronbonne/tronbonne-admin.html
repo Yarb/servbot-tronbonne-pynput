@@ -80,10 +80,10 @@
             <hr>
             <table class="session1">
                 <tr>
-                    <th colspan="12">Session 1 status:</th>
+                    <th colspan="13">Session 1 status:</th>
                 </tr>
                 <tr>
-                    <td colspan = "6">Session token:</td>
+                    <td colspan = "7">Session token:</td>
                     <td id="key1" colspan="6">-----</td>
                 </tr>
                 <tr id="buttons">
@@ -98,22 +98,32 @@
                     <td class="X">X</td>
                     <td class="Y">Y</td>
                     <td class="Z">Z</td>
+                    <td class="esc">ESC</td>
                     <td></td>
                 </tr>
                 <tr>
-                    <td colspan="12">Users:</td>
+                    <td colspan="13">Users:</td>
                 </tr>
                 <tr>
-                    <td colspan="12" id="users1"></td>
+                    <td colspan="13" id="users1">--</td>
                 </tr>
             </table>
+            <div class=keyboard>
+                Player one control:
+                <button onclick="keyClick(0,1)">up</button>
+                <button onclick="keyClick(1,1)">down</button>
+                <button onclick="keyClick(2,1)">left</button>
+                <button onclick="keyClick(3,1)">right</button>
+                <button onclick="keyClick(4,1)">A</button>
+                <button onclick="keyClick(10,1)">ESC</button>
+             </div>
             <hr>
             <table class="session2">
                 <tr>
-                    <th colspan="12">Session 2 status:</th>
+                    <th colspan="13">Session 2 status:</th>
                 </tr>
                 <tr>
-                    <td colspan = "6">Session token:</td>
+                    <td colspan = "7">Session token:</td>
                     <td id="key2" colspan="6">-----</td>
                 </tr>
                 <tr id="buttons">
@@ -128,15 +138,25 @@
                     <td class="X">X</td>
                     <td class="Y">Y</td>
                     <td class="Z">Z</td>
+                    <td class="esc">ESC</td>
                     <td></td>
                 </tr>
                 <tr>
-                    <td colspan="12">Users:</td>
+                    <td colspan="13">Users:</td>
                 </tr>
                 <tr>
-                    <td colspan="12" id="users2"></td>
+                    <td colspan="13" id="users2">--</td>
                 </tr>
             </table>
+            <div class=keyboard>
+                Player two control:
+                <button onclick="keyClick(0,2)">up</button>
+                <button onclick="keyClick(1,2)">down</button>
+                <button onclick="keyClick(2,2)">left</button>
+                <button onclick="keyClick(3,2)">right</button>
+                <button onclick="keyClick(4,2)">A</button>
+                <button onclick="keyClick(10,2)">ESC</button>
+            </div>
             <hr>
             <div>
                 Virtual Keyboard: <span class="keystate">Not logged in</span>
@@ -173,10 +193,20 @@
                 users2 = document.querySelector('#users2'),
                 token = "",
                 buttons = ["up", "down", "left", "right", 
-                           "A","B","C","X","Y","Z"],
+                           "A","B","C","X","Y","Z", "esc"],
                 s_id =[".session1 #buttons ", ".session2 #buttons "],           
                 websocket = new WebSocket(ADDRESS);
-                
+            
+            keyClick= function (btn, pl) {
+                if (token != ""){
+                    websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 1, token : token}));
+                    setTimeout(
+                                websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 0, token : token}))
+                                , 140);
+                }
+            }
+
+            
             enableKeys = function () {
                 if (users.textContent !== 'Not logged in') {
                     console.log(JSON.stringify({action: 'Enable',token: token}))
@@ -189,7 +219,7 @@
                     websocket.send(JSON.stringify({action: 'Disable',token: token}));
                 }
             }
-            
+       
             resetSession = function () {
                 if (confirm.value === "Yes"){
                     console.log("Ded");
@@ -227,6 +257,9 @@
                             }else {
                                 text += " , "  + data.value[i].toString();
                             }
+                        }
+                        if (data.value.length == 0) {
+                            text = "--";
                         }
                         if (data.id === 1) {
                             users1.textContent = (text);

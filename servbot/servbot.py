@@ -68,7 +68,15 @@ ADMIN_ENABLE = {"value": False}
 
 USERS1 = set()
 USERS2 = set()
-ADMIN = set()
+ADMINS = set()
+
+# Groups
+PLAYERS = 1
+ADMIN = 2
+
+# Players
+PLAYER1 = 0
+PLAYER2 = 1
 
 # Simple random token generator
 def random_token(value):
@@ -124,9 +132,9 @@ BUTTONSTATE = [{"up"   : 0, "down" : 0, "left" : 0, "right": 0, "A"    : 0,
 
 
 def keypresser(keys, player):
-  if player == 1:
+  if player == PLAYER1:
     keylist = KEYLIST_PLAYER1
-  elif player == 2:
+  elif player == PLAYER2:
     keylist = KEYLIST_PLAYER2
   else:
     return
@@ -138,21 +146,21 @@ def keypresser(keys, player):
       output_keyboard.press(keylist[i])
 
 
-def state_event(statelist, player):
-    if (KEY_OUTPUT and ADMIN_ENABLE["value"]):
-        keypresser(list(statelist[player - 1].values()), player)
-    return json.dumps({"type": "state", "value": list(statelist[player - 1].values()), "id": player - 1})
+def state_event(statelist, player, group):
+    if (KEY_OUTPUT and (ADMIN_ENABLE["value"] or group == ADMIN)):
+        keypresser(list(statelist[player].values()), player)
+    return json.dumps({"type": "state", "value": list(statelist[player].values()), "id": player})
 
 
 
 # Generate JSON of all users in given list
 def users_event(userlist):
     if userlist is USERS1:
-        id = 1
+        id = PLAYER1
     elif userlist is USERS2:
-        id = 2
+        id = PLAYER2
     else: 
-        id = 0
+        id = ADMIN
     users = ["--"]
     if userlist:
         users = [i for h,i in userlist]
@@ -163,30 +171,30 @@ async def notify_users(userlist):
     message = users_event(userlist)
     if userlist:  # asyncio.wait doesn't accept an empty list
         await asyncio.wait([user.send(message) for user, username in userlist])
-    if ADMIN:
-        await asyncio.wait([user.send(message) for user, username in ADMIN])
+    if ADMINS:
+        await asyncio.wait([user.send(message) for user, username in ADMINS])
 
 # Notify given userlist of events, send monitoring data to admins
-async def notify_state(player):
-    message = state_event(BUTTONSTATE, player)
-    if USERS1 and player == 1:  # asyncio.wait doesn't accept an empty list
+async def notify_state(player, group):
+    message = state_event(BUTTONSTATE, player, group)
+    if USERS1 and player == PLAYER1:  # asyncio.wait doesn't accept an empty list
         await asyncio.wait([user.send(message) for user, username in USERS1])
-    if USERS2 and player == 2:  # asyncio.wait doesn't accept an empty list
+    if USERS2 and player == PLAYER2:  # asyncio.wait doesn't accept an empty list
         await asyncio.wait([user.send(message) for user, username in USERS2])
-    if ADMIN:
-        await asyncio.wait([user.send(message) for user, username in ADMIN])
+    if ADMINS:
+        await asyncio.wait([user.send(message) for user, username in ADMINS])
 
 # Send the virtual keyboard state to admins
 async def notify_admin():
-    if ADMIN:
+    if ADMINS:
         message = json.dumps({"type": "keystate", **ADMIN_ENABLE})
-        await asyncio.wait([user.send(message) for user, username in ADMIN])
+        await asyncio.wait([user.send(message) for user, username in ADMINS])
 
 # Send the session tokens to admins        
 async def send_admin_tokens():
-    if ADMIN:
+    if ADMINS:
         message = json.dumps({"type": "tokens", "value": [token1, token2, admin_token]})
-        await asyncio.wait([user.send(message) for user, username in ADMIN])
+        await asyncio.wait([user.send(message) for user, username in ADMINS])
 
 # Register websocket
 async def register(websocket, user, userlist):
@@ -237,17 +245,17 @@ async def server(websocket, path):
                 # check token
                 if data["token"] == token1:
                     # check command
-                    if data["action"] in BUTTONSTATE[0] and data["action"] != "esc":
-                        BUTTONSTATE[0][data["action"]] = data["value"]
-                        await notify_state(1)
+                    if data["action"] in BUTTONSTATE[PLAYER1] and data["action"] != "esc":
+                        BUTTONSTATE[PLAYER1][data["action"]] = data["value"]
+                        await notify_state(PLAYER1, PLAYERS)
             elif check_client(websocket, USERS2):
                 # check token
                 if data["token"] == token2:
                     # check command
-                    if data["action"] in BUTTONSTATE[1] and data["action"] != "esc":
-                        BUTTONSTATE[1][data["action"]] = data["value"]
-                        await notify_state(2)
-            elif check_client(websocket, ADMIN):
+                    if data["action"] in BUTTONSTATE[PLAYER2] and data["action"] != "esc":
+                        BUTTONSTATE[PLAYER2][data["action"]] = data["value"]
+                        await notify_state(PLAYER2, PLAYERS)
+            elif check_client(websocket, ADMINS):
                 if data["token"] == admin_token:
                     # check command
                     if data["action"] == "Enable":
@@ -258,13 +266,13 @@ async def server(websocket, path):
                         ADMIN_ENABLE["value"] = False
                         await notify_admin()
                     elif data["action"] == "btn1":
-                        if data["btn"] in BUTTONSTATE[0]:
-                            BUTTONSTATE[0][data["btn"]] = data["value"]
-                            await notify_state(1)
+                        if data["btn"] in BUTTONSTATE[PLAYER1]:
+                            BUTTONSTATE[PLAYER1][data["btn"]] = data["value"]
+                            await notify_state(PLAYER1, ADMIN)
                     elif data["action"] == "btn2":
-                        if data["btn"] in BUTTONSTATE[1]:
-                            BUTTONSTATE[1][data["btn"]] = data["value"]
-                            await notify_state(2)
+                        if data["btn"] in BUTTONSTATE[PLAYER2]:
+                            BUTTONSTATE[PLAYER2][data["btn"]] = data["value"]
+                            await notify_state(PLAYER2, ADMIN)
                     elif data["action"] == "KILL clients":
                         print("Servbot, restarting session:")
                         await restart_session()
@@ -282,7 +290,7 @@ async def server(websocket, path):
 
                 # New admin login
                 elif data["action"] == "ADMIN" and data["token"] == admin_token:
-                    await register(websocket, data["user"], ADMIN)
+                    await register(websocket, data["user"], ADMINS)
                     await notify_admin()
                     await send_admin_tokens()
                     await notify_users(USERS1)
@@ -297,7 +305,7 @@ async def server(websocket, path):
             # This needs to be done in order, which is why it is done this way.
             if not await unregister(websocket, USERS1):
                 if not await unregister(websocket, USERS2):
-                    await unregister(websocket, ADMIN)
+                    await unregister(websocket, ADMINS)
 
 
 def print_settings():
@@ -333,5 +341,3 @@ print_settings()
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
-
-

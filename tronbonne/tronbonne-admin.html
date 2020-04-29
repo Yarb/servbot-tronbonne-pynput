@@ -110,12 +110,12 @@
             </table>
             <div class=keyboard>
                 Player one control:
-                <button onclick="keyClick(0,1)">up</button>
-                <button onclick="keyClick(1,1)">down</button>
-                <button onclick="keyClick(2,1)">left</button>
-                <button onclick="keyClick(3,1)">right</button>
-                <button onclick="keyClick(4,1)">A</button>
-                <button onclick="keyClick(10,1)">ESC</button>
+                <button onmousedown="keydown(0,1)" onmouseup="keyup(0,1)">up</button>
+                <button onmousedown="keydown(1,1)" onmouseup="keyup(1,1)">down</button>
+                <button onmousedown="keydown(2,1)" onmouseup="keyup(2,1)">left</button>
+                <button onmousedown="keydown(3,1)" onmouseup="keyup(3,1)">right</button>
+                <button onmousedown="keydown(4,1)" onmouseup="keyup(4,1)">A</button>
+                <button onmousedown="keydown(10,1)" onmouseup="keyup(10,1)">ESC</button>
              </div>
             <hr>
             <table class="session2">
@@ -150,16 +150,16 @@
             </table>
             <div class=keyboard>
                 Player two control:
-                <button onclick="keyClick(0,2)">up</button>
-                <button onclick="keyClick(1,2)">down</button>
-                <button onclick="keyClick(2,2)">left</button>
-                <button onclick="keyClick(3,2)">right</button>
-                <button onclick="keyClick(4,2)">A</button>
-                <button onclick="keyClick(10,2)">ESC</button>
+                <button onmousedown="keydown(0,2)" onmouseup="keyup(0,2)">up</button>
+                <button onmousedown="keydown(1,2)" onmouseup="keyup(1,2)">down</button>
+                <button onmousedown="keydown(2,2)" onmouseup="keyup(2,2)">left</button>
+                <button onmousedown="keydown(3,2)" onmouseup="keyup(3,2)">right</button>
+                <button onmousedown="keydown(4,2)" onmouseup="keyup(4,2)">A</button>
+                <button onmousedown="keydown(10,2)" onmouseup="keyup(10,2)">ESC</button>
             </div>
             <hr>
             <div>
-                Player virtual Keyboard output: <span class="keystate">Not logged in</span>
+                Player Virtual Keyboard output: <span class="keystate">Not logged in</span>
             </div>
             <div>
                 <button onclick="enableKeys()">Enable keys</button>
@@ -197,15 +197,17 @@
                 s_id =[".session1 #buttons ", ".session2 #buttons "],           
                 websocket = new WebSocket(ADDRESS);
             
-            keyClick= function (btn, pl) {
+            keydown= function (btn, pl) {
                 if (token != ""){
                     websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 1, token : token}));
-                    setTimeout(
-                                websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 0, token : token}))
-                                , 140);
                 }
             }
-
+            
+            keyup= function (btn, pl) {
+                if (token != ""){
+                    websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 0, token : token}));
+                }
+            }
             
             enableKeys = function () {
                 if (users.textContent !== 'Not logged in') {
@@ -284,6 +286,7 @@
                                 
                             } else {
                                 document.querySelector(s_id[data.id] + '.' + buttons[i]).style.backgroundColor = "white";
+                                
                             }
                         }
                         break;

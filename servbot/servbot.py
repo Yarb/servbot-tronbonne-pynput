@@ -102,12 +102,17 @@ def generate_tokens():
         k_len = args.keystrength
         token1 = random_token2(k_len)
         token2 = random_token2(k_len)
-        admin_token = random_token2(k_len + 2)
     else:
         token1 = random_token(TOKEN_LENGHT)
         token2 = random_token(TOKEN_LENGHT)
-        admin_token = random_token(TOKEN_LENGHT + 2)
-    
+        
+def generate_admin_token():
+    global admin_token
+    if args.keystrength:
+        k_len = args.keystrength
+        admin_token = random_token2(k_len + 2)
+    else:
+        admin_token = random_token(TOKEN_LENGHT + 2)    
 
 # Tokens
 token1 = ""
@@ -116,6 +121,7 @@ admin_token = ""
 TOKEN_LENGHT = 5
 # Generate user tokens
 generate_tokens()
+generate_admin_token()
 
 
 # Button list. TODO: Make this easier to modify

@@ -1,350 +1,311 @@
-#!/usr/bin/env python
-
-# Servbot, a WS server that obeys every whim of Tron Bonne (AKA clients).
-# In short, incoming button presses are sent to all clients and sent as
-# keypresses to the system.
-# NOTE!
-# This should be run in controlled environment as giving
-# Internet access to limited virtual keyboard without decent security
-# is not the best idea in the long run. You have been warned.
-
-import asyncio
-import json
-import logging
-import websockets
-import random
-
-import ssl
-import pathlib
-
-
-
-
-import argparse
-
-from pynput.keyboard import Controller
-from pynput.keyboard import Key
-
-output_keyboard = Controller()
-
-logging.basicConfig()
-
-parser = argparse.ArgumentParser(description='Servbot. WS server for accepting button presses from browsers')
-parser.add_argument('-a', dest='ip', required=True,
-                    help='IP address of the server.')
-parser.add_argument('-p', type=int, default=6789, dest='port',
-                    help='Server port (default 6789).')
-parser.add_argument('-k', action='store_const',const=1 , metavar='', dest='output',
-                    help='Output keypresses.')
-parser.add_argument('-S', dest='base_filename',
-                    help='Use SSL. Provide filename for .key and .crt files. Eg. "file" -> "file.crt" and "file.key".')
-parser.add_argument('-T', type = int, dest='keystrength',
-                    help='Enable stronger token system with given keylength. Admin will always be keylength + 2')
-args = parser.parse_args()
-IP = args.ip
-PORT = args.port
-KEY_OUTPUT = args.output
-ssl_state = False
-
-# SSL cert and key checking and loading
-if args.base_filename:
-    fn = args.base_filename
-    try:
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        cert_pem = pathlib.Path(__file__).with_name(fn + ".crt")
-        key = pathlib.Path(__file__).with_name(fn + ".key")
-        ssl_context.load_cert_chain(cert_pem, keyfile=key)
-        ssl_state = True
-    except FileNotFoundError:
-        print("SSL init error:")
-        print(fn + ".key and/or " + fn + ".crt not found in the same directory")
-        exit(-1)
-    except ssl.SSLError:
-        print("SSL init error: Bad .key or .crt?")
-        exit(-1)
-        
-        
-ADMIN_ENABLE = {"value": False}
-
-USERS1 = set()
-USERS2 = set()
-ADMINS = set()
-
-# Groups
-PLAYERS = 1
-ADMIN = 2
-
-# Players
-PLAYER1 = 0
-PLAYER2 = 1
-
-# Simple random token generator
-def random_token(value):
-    a = ""
-    for i in range(value):
-        a += str(random.randint(0,9))
-    return a
-    
-# Better random token generator
-def random_token2(value):
-    a = ""
-    for i in range(value):
-        if random.randint(0,1):
-            a += str(random.randint(0,9))
-        else:
-            # 97 for lower, 65 for uppercase
-            a += chr(65 + random.randint(0,25))
-    return a    
-
-def generate_tokens():
-    global token1, token2, admin_token
-    if args.keystrength:
-        k_len = args.keystrength
-        token1 = random_token2(k_len)
-        token2 = random_token2(k_len)
-    else:
-        token1 = random_token(TOKEN_LENGHT)
-        token2 = random_token(TOKEN_LENGHT)
-        
-def generate_admin_token():
-    global admin_token
-    if args.keystrength:
-        k_len = args.keystrength
-        admin_token = random_token2(k_len + 2)
-    else:
-        admin_token = random_token(TOKEN_LENGHT + 2)    
-
-# Tokens
-token1 = ""
-token2 = ""
-admin_token = ""
-TOKEN_LENGHT = 5
-# Generate user tokens
-generate_tokens()
-generate_admin_token()
-
-
-# Button list. TODO: Make this easier to modify
-KEYLIST_PLAYER1 = ['w','s','a','d','r','t','y','u','i','o', Key.esc]
-KEYLIST_PLAYER2 = ['p','l','ö','ä','h','j','k','n','m',',', Key.esc]
-
-BUTTONSTATE = [{"up"   : 0, "down" : 0, "left" : 0, "right": 0, "A"    : 0, 
-                "B"    : 0, "C"    : 0, "X"    : 0, "Y"    : 0, "Z"    : 0, "esc"  : 0},
-               {"up"   : 0, "down" : 0, "left" : 0, "right": 0, "A"    : 0, 
-                "B"    : 0, "C"    : 0, "X"    : 0, "Y"    : 0, "Z"    : 0, "esc"  : 0}
-              ]
-
-
-
-
-def keypresser(keys, player):
-  if player == PLAYER1:
-    keylist = KEYLIST_PLAYER1
-  elif player == PLAYER2:
-    keylist = KEYLIST_PLAYER2
-  else:
-    return
-
-  for i in range(len(keylist)):
-    output_keyboard.release(keylist[i])
-    if keys[i] == 1:
-      print(keylist[i])
-      output_keyboard.press(keylist[i])
-
-
-def state_event(statelist, player, group):
-    if (KEY_OUTPUT and (ADMIN_ENABLE["value"] or group == ADMIN)):
-        keypresser(list(statelist[player].values()), player)
-    return json.dumps({"type": "state", "value": list(statelist[player].values()), "id": player})
-
-
-
-# Generate JSON of all users in given list
-def users_event(userlist):
-    if userlist is USERS1:
-        id = PLAYER1
-    elif userlist is USERS2:
-        id = PLAYER2
-    else: 
-        id = ADMIN
-    users = ["--"]
-    if userlist:
-        users = [i for h,i in userlist]
-    return json.dumps({"type": "users", "value": users, "id":id})
-        
-# Send notification to given userlist and to admins
-async def notify_users(userlist):
-    message = users_event(userlist)
-    if userlist:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in userlist])
-    if ADMINS:
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
-
-# Notify given userlist of events, send monitoring data to admins
-async def notify_state(player, group):
-    message = state_event(BUTTONSTATE, player, group)
-    if USERS1 and player == PLAYER1:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in USERS1])
-    if USERS2 and player == PLAYER2:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in USERS2])
-    if ADMINS:
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
-
-# Send the virtual keyboard state to admins
-async def notify_admin():
-    if ADMINS:
-        message = json.dumps({"type": "keystate", **ADMIN_ENABLE})
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
-
-# Send the session tokens to admins        
-async def send_admin_tokens():
-    if ADMINS:
-        message = json.dumps({"type": "tokens", "value": [token1, token2, admin_token]})
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
-
-# Register websocket
-async def register(websocket, user, userlist):
-    userlist.add((websocket, user))
-    await notify_users(userlist)
-
-# Remove registered websocket
-async def unregister(websocket, userlist):
-    for client in userlist:
-        if client[0] == websocket:
-            userlist.remove(client)
-            await notify_users(userlist)
-            return True
-    return False
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>I am Tron Bonne, be afraid, be very afraid!</title>
+        <style type="text/css">
+            body {
+                font-family: "Courier New", sans-serif;
+                text-align: center;
+            }
+            .buttons {
+                font-size: 1em;
+                display: block;
+                justify-content: center;
+            }
+            .button, .value {
+                line-height: 1;
+                padding: 1rem;
+                margin: 1rem;
+                border: medium solid;
+                min-height: 1em;
+                min-width: 1em;
+            }
+            .button {
+                cursor: pointer;
+                user-select: none;
+            }
+            .value {
+                min-width: 2em;
+            }
+            .state {
+                display: block;
+                font-size: 1em;
+            }
+            .keystate {
+                display: block;
+            }
+            .controls {
+                display: none;
+                justify-content: center;
+            }
+            table {
+                justify-content: center;
+                display: flex;
+            }
+            td#key1 {
+                font-weight: bold;
+            }
+            td#key2 {
+                font-weight: bold;
+            }
+            .error {
+                color: red;
+            }
+            #users1 {
+                font-style: italic;
+            }
+            #users2 {
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body oncontextmenu="return false">
+        <div class="state">
+            Status: <span class="users">Not logged in</span>
+        </div>
+        <div class="error">
             
-# Check if websocket exists in given userlist
-def check_client(websocket, userlist):
-    for client in userlist:
-        if client[0] == websocket:
-            return True
-    return False
-
-# Restart the session. This removes all the users except for admins
-# and generates new set of session tokens
-async def restart_session():
-    while USERS1:
-        client = USERS1.pop()
-        await client[0].close()
-    while USERS2:
-        client = USERS2.pop()
-        await client[0].close()
-    await notify_users(USERS1)
-    await notify_users(USERS2)
-    generate_tokens()
-
-
-# Main server loop
-async def server(websocket, path):
-    # register(websocket) sends user_event() to websocket
-    try:
-        #await websocket.send(state_event())
-        async for message in websocket:
-            data = json.loads(message)
-            if data["token"]:
-                data["token"] = data["token"].upper()
-            # If websocket registered - check commands
-            if check_client(websocket, USERS1):
-                # check token
-                if data["token"] == token1:
-                    # check command
-                    if data["action"] in BUTTONSTATE[PLAYER1] and data["action"] != "esc":
-                        BUTTONSTATE[PLAYER1][data["action"]] = data["value"]
-                        await notify_state(PLAYER1, PLAYERS)
-            elif check_client(websocket, USERS2):
-                # check token
-                if data["token"] == token2:
-                    # check command
-                    if data["action"] in BUTTONSTATE[PLAYER2] and data["action"] != "esc":
-                        BUTTONSTATE[PLAYER2][data["action"]] = data["value"]
-                        await notify_state(PLAYER2, PLAYERS)
-            elif check_client(websocket, ADMINS):
-                if data["token"] == admin_token:
-                    # check command
-                    if data["action"] == "Enable":
-                        ADMIN_ENABLE["value"] = True
-                        await notify_admin()
-                        
-                    elif data["action"] == "Disable":
-                        ADMIN_ENABLE["value"] = False
-                        await notify_admin()
-                    elif data["action"] == "btn1":
-                        if data["btn"] in BUTTONSTATE[PLAYER1]:
-                            BUTTONSTATE[PLAYER1][data["btn"]] = data["value"]
-                            await notify_state(PLAYER1, ADMIN)
-                    elif data["action"] == "btn2":
-                        if data["btn"] in BUTTONSTATE[PLAYER2]:
-                            BUTTONSTATE[PLAYER2][data["btn"]] = data["value"]
-                            await notify_state(PLAYER2, ADMIN)
-                    elif data["action"] == "KILL clients":
-                        print("Servbot, restarting session:")
-                        await restart_session()
-                        await notify_admin()
-                        await send_admin_tokens()
-                        print_settings()
-            # else check login 
-            else:
-                # New websocket login
-                if data["action"] == "login":
-                    if data["token"] == token1 and data["user"]:
-                        await register(websocket, data["user"], USERS1)
-                    elif data["token"] == token2 and data["user"]:
-                        await register(websocket, data["user"], USERS2)
-
-                # New admin login
-                elif data["action"] == "ADMIN" and data["token"] == admin_token:
-                    await register(websocket, data["user"], ADMINS)
-                    await notify_admin()
-                    await send_admin_tokens()
-                    await notify_users(USERS1)
-                    await notify_users(USERS2)
+        </div>
+		<div class="login">
+			<form action="javascript:;" onsubmit="connect()">
+				Username: <input type=text id="username"><br>
+				Admin token:   <input type=text id="Secret"><br>
+				<input type=submit value="Connect">
+			</form>
+        </div>
+        <div class="controls">
+            <div>
+                <b>Admin key:</b> <div id="adminkey">---</div>
+            </div>
+            <hr>
+            <table class="session1">
+                <tr>
+                    <th colspan="13">Session 1 status:</th>
+                </tr>
+                <tr>
+                    <td colspan = "7">Session token:</td>
+                    <td id="key1" colspan="6">-----</td>
+                </tr>
+                <tr id="buttons">
+                    <td></td>
+                    <td class="up">UP</td>
+                    <td class="down">DWN</td>
+                    <td class="left">LFT</td>
+                    <td class="right">RGT</td>
+                    <td class="A">A</td>
+                    <td class="B">B</td>
+                    <td class="C">C</td>
+                    <td class="X">X</td>
+                    <td class="Y">Y</td>
+                    <td class="Z">Z</td>
+                    <td class="esc">ESC</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="13">Users:</td>
+                </tr>
+                <tr>
+                    <td colspan="13" id="users1">--</td>
+                </tr>
+            </table>
+            <div class=keyboard>
+                Player one control:
+                <button onmousedown="keydown(0,1)" onmouseup="keyup(0,1)">up</button>
+                <button onmousedown="keydown(1,1)" onmouseup="keyup(1,1)">down</button>
+                <button onmousedown="keydown(2,1)" onmouseup="keyup(2,1)">left</button>
+                <button onmousedown="keydown(3,1)" onmouseup="keyup(3,1)">right</button>
+                <button onmousedown="keydown(4,1)" onmouseup="keyup(4,1)">A</button>
+                <button onmousedown="keydown(10,1)" onmouseup="keyup(10,1)">ESC</button>
+             </div>
+            <hr>
+            <table class="session2">
+                <tr>
+                    <th colspan="13">Session 2 status:</th>
+                </tr>
+                <tr>
+                    <td colspan = "7">Session token:</td>
+                    <td id="key2" colspan="6">-----</td>
+                </tr>
+                <tr id="buttons">
+                    <td></td>
+                    <td class="up">UP</td>
+                    <td class="down">DWN</td>
+                    <td class="left">LFT</td>
+                    <td class="right">RGT</td>
+                    <td class="A">A</td>
+                    <td class="B">B</td>
+                    <td class="C">C</td>
+                    <td class="X">X</td>
+                    <td class="Y">Y</td>
+                    <td class="Z">Z</td>
+                    <td class="esc">ESC</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="13">Users:</td>
+                </tr>
+                <tr>
+                    <td colspan="13" id="users2">--</td>
+                </tr>
+            </table>
+            <div class=keyboard>
+                Player two control:
+                <button onmousedown="keydown(0,2)" onmouseup="keyup(0,2)">up</button>
+                <button onmousedown="keydown(1,2)" onmouseup="keyup(1,2)">down</button>
+                <button onmousedown="keydown(2,2)" onmouseup="keyup(2,2)">left</button>
+                <button onmousedown="keydown(3,2)" onmouseup="keyup(3,2)">right</button>
+                <button onmousedown="keydown(4,2)" onmouseup="keyup(4,2)">A</button>
+                <button onmousedown="keydown(10,2)" onmouseup="keyup(10,2)">ESC</button>
+            </div>
+            <hr>
+            <div>
+                Player Virtual Keyboard output: <span class="keystate">Not logged in</span>
+            </div>
+            <div>
+                <button onclick="enableKeys()">Enable keys</button>
+                <button onclick="disableKeys()">Disable keys</button>
+            </div>
+            <div>
+                <br>
+                Session reset. Type "Yes" to restart session: 
+                <input type=text id="confirm" value="No">
+                <button onclick="resetSession()">Reset</button>
+            </div>
+        </div>
+        <script>
+            // Enter servbot ip address here
+            const ADDRESS = "ws://localhost:6789/"
+            
+            
+            var value = document.querySelector('.value'),
+                users = document.querySelector('.users'),
+                error = document.querySelector('.error'),
+                keystate = document.querySelector('.keystate'),
+                controls = document.querySelector('.controls'),
+                keysEnable = document.querySelector('.enable_button'),
+                keysDisable = document.querySelector('.disable_button'),
+                confirm = document.querySelector('#confirm'),
+                login = document.querySelector('.login'),
+                adminKey = document.querySelector('#adminkey'),
+                key1 = document.querySelector('#key1'),
+                key2 = document.querySelector('#key2'),
+                users1 = document.querySelector('#users1'),
+                users2 = document.querySelector('#users2'),
+                token = "",
+                buttons = ["up", "down", "left", "right", 
+                           "A","B","C","X","Y","Z", "esc"],
+                s_id =[".session1 #buttons ", ".session2 #buttons "],           
+                websocket = new WebSocket(ADDRESS);
+            
+            keydown= function (btn, pl) {
+                if (token != ""){
+                    websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 1, token : token}));
+                }
+            }
+            
+            keyup= function (btn, pl) {
+                if (token != ""){
+                    websocket.send(JSON.stringify({action: "btn" + pl, btn : buttons[btn], value: 0, token : token}));
+                }
+            }
+            
+            enableKeys = function () {
+                if (users.textContent !== 'Not logged in') {
+                    console.log(JSON.stringify({action: 'Enable',token: token}))
+                    websocket.send(JSON.stringify({action: 'Enable',token: token}));
+                }
+            }
+            
+            disableKeys = function () {
+                if (users.textContent !== 'Not logged in') {
+                    websocket.send(JSON.stringify({action: 'Disable',token: token}));
+                }
+            }
+       
+            resetSession = function () {
+                if (confirm.value === "Yes"){
+                    console.log("Ded");
+                    websocket.send(JSON.stringify({action: 'KILL clients', token: token}));
+                }
+                confirm.value = "No";
+            }
+            
+            connect = function () {
+                name = document.querySelector('#username').value;
+                secret = document.querySelector('#Secret').value;
+                console.log("Form returned:");
+                console.log(name + ' ' + secret);
+                token = secret;
+                websocket.send(JSON.stringify({action: 'ADMIN', user: name, token: token}));
+			}
+            
+            websocket.onmessage = function (event) {
+                data = JSON.parse(event.data);
+                switch (data.type) {
+                    case 'keystate':
+                        console.log("Data : " + data.value)
+                        if (data.value) {
+                            keystate.textContent = "ENABLED"
+                        }else {
+                            keystate.textContent = "DISABLED"
+                        }
+                        break;
+                    case 'users':
+                        console.log(data);
+                        text = "";
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (i == 0) {
+                                text += data.value[i].toString();
+                            }else {
+                                text += " , "  + data.value[i].toString();
+                            }
+                        }
+                        if (data.value.length == 0) {
+                            text = "--";
+                        }
+                        if (data.id === 0) {
+                            users1.textContent = (text);
+                        }else if (data.id === 1) {
+                            users2.textContent = (text);
+                        }else {
+                            login.style.display = "none";
+                            controls.style.display = "block";
+                            users.textContent = (text);                                
+                        }
+                        break;
                     
-                # Something else, report.
-                else:
-                    logging.error("Token error or bad message", data)
-
-    finally:
-            # Go throught the lists one y one and try to unregister the websocket
-            # This needs to be done in order, which is why it is done this way.
-            if not await unregister(websocket, USERS1):
-                if not await unregister(websocket, USERS2):
-                    await unregister(websocket, ADMINS)
-
-
-def print_settings():
-    print("\n---\n")
-
-    if (KEY_OUTPUT):
-        print("Virtual keyboard mode is enabled. Use the admin interface to activate output")
-    else:
-        print("Connection testing mode. Virtual keyboard is DISABLED.")
-
-    print("\nServbot running at: " )
-    if ssl_state:
-        print("wss://" + IP + ":" + str(PORT))
-    else:
-        print("ws://" + IP + ":" + str(PORT))
-    print("---")
-    print("ADMIN token is: " + admin_token)
-    print("\n")
-    print("Player 1 session token is: " + token1)
-    print("Player 2 session token is: " + token2)
-    print("\n")
-    print("Token verification is case insensitive")
-    print("\n---\n")
-
-if ssl_state:
-    start_server = websockets.serve(server, IP, PORT, ssl=ssl_context)
-else:
-    start_server = websockets.serve(server, IP, PORT)
-
-
-
-print_settings()
-
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+                    case 'tokens':
+                        key1.textContent = data.value[0].toString();
+                        key2.textContent = data.value[1].toString();
+                        adminKey.textContent = data.value[2].toString();
+                        break;
+                    case 'state':
+                        for (let i = 0; i < data.value.length; i++ ) {
+                            if (data.value[i]) {
+                                document.querySelector(s_id[data.id] + '.' + buttons[i]).style.backgroundColor = "cyan";
+                                
+                            } else {
+                                document.querySelector(s_id[data.id] + '.' + buttons[i]).style.backgroundColor = "white";
+                                
+                            }
+                        }
+                        break;
+                    default:
+                        console.error(
+                            "unsupported event", data);
+                }
+            };
+            websocket.onclose = function (event) {
+                console.log('Connection closed');
+                login.style.display = "none";
+                controls.style.display = "none";
+                users.textContent = "Connection closed";
+            };
+            websocket.onerror = function(evt) {
+                users.textContent = "Connection error, try refresh";
+                console.log(evt);
+            };
+        </script>
+    </body>
+</html>
 

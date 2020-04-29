@@ -171,7 +171,7 @@
                 switch (data.type) {
                     case 'state':
                         console.log("Data : " + data.value)
-                        for (let i = 0; i < data.value.length; i++ ) {
+                        for (let i = 0; i < buttons.length; i++ ) {
                             if (data.value[i]) {
                                 document.querySelector('.' + buttons[i]).src="images/" + button_img[i] + "down.png";
                             } else {

@@ -176,31 +176,38 @@ def users_event(userlist):
 async def notify_users(userlist):
     message = users_event(userlist)
     if userlist:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in userlist])
+        for user, username in userlist:
+            await user.send(message)
     if ADMINS:
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
+        for user, username in ADMINS:
+            await user.send(message)
 
 # Notify given userlist of events, send monitoring data to admins
 async def notify_state(player, group):
     message = state_event(BUTTONSTATE, player, group)
     if USERS1 and player == PLAYER1:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in USERS1])
+        for user, username in USERS1:
+            await user.send(message)
     if USERS2 and player == PLAYER2:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user, username in USERS2])
+        for user, username in USERS2:
+            await user.send(message)
     if ADMINS:
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
+        for user, username in ADMINS:
+            await user.send(message)
 
 # Send the virtual keyboard state to admins
 async def notify_admin():
     if ADMINS:
         message = json.dumps({"type": "keystate", **ADMIN_ENABLE})
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
+        for user, username in ADMINS:
+            await user.send(message)
 
 # Send the session tokens to admins        
 async def send_admin_tokens():
     if ADMINS:
         message = json.dumps({"type": "tokens", "value": [token1, token2, admin_token]})
-        await asyncio.wait([user.send(message) for user, username in ADMINS])
+        for user, username in ADMINS:
+            await user.send(message)
 
 # Register websocket
 async def register(websocket, user, userlist):

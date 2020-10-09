@@ -1,0 +1,72 @@
+body {
+    font-family: "Courier New", sans-serif;
+    text-align: center;
+    touch-action: manipulation;
+}
+
+#upper {
+    margin-top: 3vw;
+    display: flow-root;
+}
+#lower {
+    display: block;
+}
+
+.buttons {
+}
+
+.button, .value {
+    line-height: 1;
+    border: none;
+    min-width: 13vw;
+}
+
+.up {
+    vertical-align: bottom;
+}
+
+.down {
+    vertical-align: top;
+}
+
+.left {
+    vertical-align: middle;
+    margin-right: 3vw;
+}
+
+.right {
+    vertical-align: middle;
+    margin-left: 3vw;
+}
+
+
+.buttons#dpad {
+    justify-content: flex-start;
+    float: left;
+}
+
+.buttons#abcxyz {
+    justify-content: flex-end;
+    float: right;
+    margin-right: 2.5vw;
+}
+
+.buttons#center_padding {
+    min-width: 10vw;
+}
+
+#btop {
+    min-height: 8vw;
+}
+
+.state {
+    font-size: 1.5em;
+}
+.login table{
+    margin:auto;
+    display: inline;
+}
+
+.error {
+    color: red;
+}

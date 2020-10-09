@@ -2,34 +2,70 @@
 <html>
     <head>
         <title>I am Tron Bonne, be afraid, be very afraid!</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
         <style type="text/css">
             body {
                 font-family: "Courier New", sans-serif;
                 text-align: center;
                 touch-action: manipulation;
             }
-            .buttons {
-                display: flex;
-                justify-content: center;
+            
+            #upper {
+                display: none;
             }
+            #lower {
+                display: block;
+            }
+            
+            .buttons {
+            }
+            
             .button, .value {
                 line-height: 1;
                 border: none;
-                min-width: 5.0em;
+                min-width: 12vw;
             }
-            .button {
-                cursor: pointer;
+            
+            .up {
+                vertical-align: bottom;
+            }
+            
+            .down {
+                vertical-align: top;
+            }
+            
+            .left {
+                vertical-align: middle;
+            }
+            
+            .right {
+                vertical-align: middle;
+            }
+            
+            table {
+                margin-top: 4vh;
+                min-width: 45vw;
+                display: inline-flex;
+                border-spacing: 0px;
                 user-select: none;
             }
-            .minus {
-                color: red;
+            .buttons#dpad {
+                justify-content: flex-start;
             }
-            .plus {
-                color: green;
+            
+            .buttons#abcxyz {
+                justify-content: flex-end;
             }
-            .value {
-                min-width: 2em;
+            
+            td {
+                min-width: 80px;
+                user-drag: none;
+                padding: 0px;
             }
+            tr {
+                min-height: 1vh;
+            }
+            
             .state {
                 font-size: 1.5em;
             }
@@ -37,79 +73,86 @@
                 margin:auto;
                 display: inline;
             }
-            table {
-                margin: 1em;
-            }
-            td {
-                min-width: 80px;
-                user-drag: none;
-            }
+            
             .error {
                 color: red;
             }
         </style>
     </head>
     <body ondragstart="return false;" ondrop="return false;" oncontextmenu="return false" onkeydown="keypress(event, 1)" onkeyup="keypress(event, 0)">
-        <table class="buttons" draggable="false">
-            <tr>
-            <td></td>
-            <td><img class="up button"   draggable="false" src="images/up_up.png"></td>
-            <td></td>
-            <td></td>
-            <td draggable=false"><img class="A button" draggable="false" src="images/r_up.png"></td>
-            <td><img class="B button" draggable="false" src="images/g_up.png"></td>
-            <td><img class="C button" draggable="false" src="images/b_up.png"></td>
-            </tr>
-            <tr>
-            <td><img class="left button" draggable="false" src="images/lf_up.png"></td>
-            <td></td>
-            <td><img class="right button"draggable="false" src="images/rt_up.png"></td>
-            <td></td>
-            <td><img class="X button" draggable="false" src="images/y_up.png"></td>
-            <td><img class="Y button" draggable="false" src="images/w_up.png"></td>
-            <td><img class="Z button" draggable="false" src="images/bl_up.png"></td>
-            </tr>
-            <tr>
-            <td></td>
-            <td><img class="down button" draggable="false" src="images/dw_up.png"></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            </tr>
+        <div id="upper">
+            <table class="buttons" id="dpad" draggable="false">
+                <tr>
+                    <td></td>
+                    <td><img class="up button" draggable="false" src="images/up_up.png"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><img class="left button" draggable="false" src="images/lf_up.png"></td>
+                    <td id="pad_center"></td>
+                    <td><img class="right button"draggable="false" src="images/rt_up.png"></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><img class="down button" draggable="false" src="images/dw_up.png"></td>
+                    <td></td>
+                </tr>
+            </table>
+            <table class="buttons" id="abcxyz" draggable= "false">
+                <tr>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><img class="A button" draggable="false" src="images/r_up.png"></td>
+                    <td><img class="B button" draggable="false" src="images/g_up.png"></td>
+                    <td><img class="C button" draggable="false" src="images/b_up.png"></td>
+                </tr>
+                <tr>
+                    <td><img class="X button" draggable="false" src="images/y_up.png"></td>
+                    <td><img class="Y button" draggable="false" src="images/w_up.png"></td>
+                    <td><img class="Z button" draggable="false" src="images/bl_up.png"></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+        </div>    
+        <div id="lower">
+            <h1>Glorious Tron Bonne control scheme!
+            </h1>
+            <div class="login">
+                <form action="javascript:;" onsubmit="connect()">
+                    <table>
+                        <tr>
+                            <td>Player name: </td>
+                            <td><input type=text id="username"></td>
+                        </tr>
+                        <tr>
+                            <td>Session key:</td>
+                            <td><input type=text id="Secret"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <input type=submit value="Connect">
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+            <div class="state">
+                <span class="users">Please type your name and given session key</span>
+            </div>
+            <div class="error">
+            </div>
             
-            
-            
-        </table>
-        <h1>Glorious Tron Bonne control scheme!
-        </h1>
-		<div class="login">
-			<form action="javascript:;" onsubmit="connect()">
-                <table>
-                    <tr>
-                        <td>Player name: </td>
-                        <td><input type=text id="username"></td>
-                    </tr>
-                    <tr>
-                        <td>Session key:</td>
-                        <td><input type=text id="Secret"></td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <input type=submit value="Connect">
-                        </td>
-                    </tr>
-                </table>
-			</form>
+            <br>
+            <footer>
+            <img src="images/TronB.jpg"></img>
+            </footer>
         </div>
-        <div class="state">
-            <span class="users">Please type your name and given session key</span>
-        </div>
-        <div class="error">
-        </div>
-        
-        <br>
+	
         <script>
             const ADDRESS = "ws://localhost:6789/";
             var value = document.querySelector('.value'),
@@ -152,30 +195,33 @@
             
             sendButtonChange = function(button, val) {
                 if (login.style.display == "none") {
+                    if (state[button] !== val)
                     window.websocket.send(JSON.stringify({action: buttons[button], value: val, token : token}));
                     state[button] = val;
                 }
             }
             
             for (let j = 0; j < buttons.length; j++) {
+                
+                document.querySelector("." + buttons[j]).ontouchstart = function (event) {
+                    sendButtonChange(j,1);
+                }
+                
+                document.querySelector("." + buttons[j]).ontouchend = function (event) {
+                    sendButtonChange(j,0);
+                }
+            
                 document.querySelector("." + buttons[j]).onmousedown = function (event) {
                     sendButtonChange(j,1);
                 }
+                
                 document.querySelector("." + buttons[j]).onmouseout = function (event) {
-                    if (login.style.display == "none") {
-                        if (state[j] === 1){
-                            sendButtonChange(j,0);
-                        }
-                    }
-                }
-                document.querySelector("." + buttons[j]).onmouseup = function (event) {
-                    if (login.style.display == "none") {
-                        if (state[j] === 1){
-                            sendButtonChange(j,0);
-                        }
-                    }
+                    sendButtonChange(j,0);
                 }
                 
+                document.querySelector("." + buttons[j]).onmouseup = function (event) {
+                    sendButtonChange(j,0);
+                }
             }
 
             
@@ -203,6 +249,8 @@
                             }
                         }
                         login.style.display = "none";
+                        lower.style.display = "none";
+                        upper.style.display = "block";
                         users.textContent = (text);
                         break;
                     default:
@@ -214,17 +262,18 @@
             window.websocket.onclose = function (event) {
                 console.log('Connection closed');
                 login.style.display = "none";
+                lower.style.display = "block";
+                upper.style.display = "none";
                 users.textContent = "Connection closed, another servbot gone...";
             };
             window.websocket.onerror = function(evt) {
                 error.textContent = "Connection error, try refresh";
                 login.style.display = "none";
+                lower.style.display = "block";
+                upper.style.display = "none";
                 console.log(evt);
             };
             
         </script>
-        <footer>
-        <img src="images/TronB.jpg"></img>
-        </footer>
     </body>
 </html>

@@ -3,121 +3,38 @@
     <head>
         <title>I am Tron Bonne, be afraid, be very afraid!</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-        <style type="text/css">
-            body {
-                font-family: "Courier New", sans-serif;
-                text-align: center;
-                touch-action: manipulation;
-            }
-            
-            #upper {
-                display: none;
-            }
-            #lower {
-                display: block;
-            }
-            
-            .buttons {
-            }
-            
-            .button, .value {
-                line-height: 1;
-                border: none;
-                min-width: 12vw;
-            }
-            
-            .up {
-                vertical-align: bottom;
-            }
-            
-            .down {
-                vertical-align: top;
-            }
-            
-            .left {
-                vertical-align: middle;
-            }
-            
-            .right {
-                vertical-align: middle;
-            }
-            
-            table {
-                margin-top: 4vh;
-                min-width: 45vw;
-                display: inline-flex;
-                border-spacing: 0px;
-                user-select: none;
-            }
-            .buttons#dpad {
-                justify-content: flex-start;
-            }
-            
-            .buttons#abcxyz {
-                justify-content: flex-end;
-            }
-            
-            td {
-                min-width: 80px;
-                user-drag: none;
-                padding: 0px;
-            }
-            tr {
-                min-height: 1vh;
-            }
-            
-            .state {
-                font-size: 1.5em;
-            }
-            .login table{
-                margin:auto;
-                display: inline;
-            }
-            
-            .error {
-                color: red;
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="style.css">
     </head>
     <body ondragstart="return false;" ondrop="return false;" oncontextmenu="return false" onkeydown="keypress(event, 1)" onkeyup="keypress(event, 0)">
         <div id="upper">
-            <table class="buttons" id="dpad" draggable="false">
-                <tr>
-                    <td></td>
-                    <td><img class="up button" draggable="false" src="images/up_up.png"></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><img class="left button" draggable="false" src="images/lf_up.png"></td>
-                    <td id="pad_center"></td>
-                    <td><img class="right button"draggable="false" src="images/rt_up.png"></td>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td><img class="down button" draggable="false" src="images/dw_up.png"></td>
-                    <td></td>
-                </tr>
-            </table>
-            <table class="buttons" id="abcxyz" draggable= "false">
-                <tr>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td><img class="A button" draggable="false" src="images/r_up.png"></td>
-                    <td><img class="B button" draggable="false" src="images/g_up.png"></td>
-                    <td><img class="C button" draggable="false" src="images/b_up.png"></td>
-                </tr>
-                <tr>
-                    <td><img class="X button" draggable="false" src="images/y_up.png"></td>
-                    <td><img class="Y button" draggable="false" src="images/w_up.png"></td>
-                    <td><img class="Z button" draggable="false" src="images/bl_up.png"></td>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            </table>
+            <div class="buttons" id="dpad" draggable="false">
+                <div id="dtop">
+                    <img class="up button" draggable="false" src="images/up_up.png">
+                </div>
+                <div id="dmiddle">
+                    <img class="left button" draggable="false" src="images/lf_up.png">
+                    <img class="right button"draggable="false" src="images/rt_up.png">
+                </div>
+                <div id="dbottom">
+                    <img class="down button" draggable="false" src="images/dw_up.png">
+                </div>
+            </div>  
+            <div class="buttons" id="center_padding">
+            </div>
+            <div class="buttons" id="abcxyz" draggable= "false">
+                <div id="btop">
+                </div>
+                <div id="dmiddle">
+                    <img class="A button" draggable="false" src="images/r_up.png">
+                    <img class="B button" draggable="false" src="images/g_up.png">
+                    <img class="C button" draggable="false" src="images/b_up.png">
+                </div>
+                <div id="dbottom">
+                    <img class="X button" draggable="false" src="images/y_up.png">
+                    <img class="Y button" draggable="false" src="images/w_up.png">
+                    <img class="Z button" draggable="false" src="images/bl_up.png">
+                </div>
+            </div>
         </div>    
         <div id="lower">
             <h1>Glorious Tron Bonne control scheme!
@@ -152,128 +69,7 @@
             <img src="images/TronB.jpg"></img>
             </footer>
         </div>
-	
-        <script>
-            const ADDRESS = "ws://localhost:6789/";
-            var value = document.querySelector('.value'),
-                users = document.querySelector('.users'),
-                login = document.querySelector('.login'),
-                error = document.querySelector('.error'),
-                state = [0,0,0,0,0,0,0,0,0,0,0,0],
-                token = "",
-                
-                
-                buttons = ["up", "down", "left", "right", 
-                           "A","B","C","X","Y","Z"],
-                button_img = ["up_","dw_","lf_","rt_","r_", "g_", "b_", "y_", "w_", "bl_"],
-                keymap =     {87:0 ,83:1 ,65:2 ,68:3 ,74:4, 75:5, 76:6, 78:7, 77:8, 188:9};
-            
-            window.websocket = new WebSocket(ADDRESS);
-            
-            createWebsocket = function() {
-                window.websocket = new WebSocket(ADDRESS);
-            }
-            
-            keypress = function (event, value) {
-                var x = event.which || event.keyCode;
-                if (keymap[x] >= 0 && login.style.display == "none") {
-                    if (state[keymap[x]] != value) {
-                        sendButtonChange(keymap[x], value);
-                    }
-                }
-            }
-            
-            
-            connect = function () {
-                name = document.querySelector('#username').value;
-                secret = document.querySelector('#Secret').value;
-                console.log("Form returned:");
-                console.log(name + ' ' + secret);
-                token = secret;
-                window.websocket.send(JSON.stringify({action: 'login', user: name, token: token}));
-			}
-            
-            sendButtonChange = function(button, val) {
-                if (login.style.display == "none") {
-                    if (state[button] !== val)
-                    window.websocket.send(JSON.stringify({action: buttons[button], value: val, token : token}));
-                    state[button] = val;
-                }
-            }
-            
-            for (let j = 0; j < buttons.length; j++) {
-                
-                document.querySelector("." + buttons[j]).ontouchstart = function (event) {
-                    sendButtonChange(j,1);
-                }
-                
-                document.querySelector("." + buttons[j]).ontouchend = function (event) {
-                    sendButtonChange(j,0);
-                }
-            
-                document.querySelector("." + buttons[j]).onmousedown = function (event) {
-                    sendButtonChange(j,1);
-                }
-                
-                document.querySelector("." + buttons[j]).onmouseout = function (event) {
-                    sendButtonChange(j,0);
-                }
-                
-                document.querySelector("." + buttons[j]).onmouseup = function (event) {
-                    sendButtonChange(j,0);
-                }
-            }
-
-            
-            
-            window.websocket.onmessage = function (event) {
-                data = JSON.parse(event.data);
-                switch (data.type) {
-                    case 'state':
-                        console.log("Data : " + data.value)
-                        for (let i = 0; i < buttons.length; i++ ) {
-                            if (data.value[i]) {
-                                document.querySelector('.' + buttons[i]).src="images/" + button_img[i] + "down.png";
-                            } else {
-                                document.querySelector('.' + buttons[i]).src="images/" + button_img[i] + "up.png";
-                            }
-                        }
-                        break;
-                    case 'users':
-                        text = "";
-                        for (let i = 0; i < data.value.length; i++ ) {
-                            if (i == 0) {
-                                text += data.value[i].toString();
-                            }else {
-                                text += " , "  + data.value[i].toString();
-                            }
-                        }
-                        login.style.display = "none";
-                        lower.style.display = "none";
-                        upper.style.display = "block";
-                        users.textContent = (text);
-                        break;
-                    default:
-                        console.error(
-                            "unsupported event", data);
-                }
-            };
-            
-            window.websocket.onclose = function (event) {
-                console.log('Connection closed');
-                login.style.display = "none";
-                lower.style.display = "block";
-                upper.style.display = "none";
-                users.textContent = "Connection closed, another servbot gone...";
-            };
-            window.websocket.onerror = function(evt) {
-                error.textContent = "Connection error, try refresh";
-                login.style.display = "none";
-                lower.style.display = "block";
-                upper.style.display = "none";
-                console.log(evt);
-            };
-            
+        <script src="tronbonne.js">
         </script>
     </body>
 </html>

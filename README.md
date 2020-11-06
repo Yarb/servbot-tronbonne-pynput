@@ -1,6 +1,7 @@
-# servbot-tronbonne
+# servbot-tronbonne-pynput
 Simple WebSocket solution for sharing a controller(emulated keyboard) to multiple players over Internet.
 
+This is a old version of the system that uses pynput and virtual keyboard. The main version is developed under name Servbot-Tronbonne and utilizes vJoy virtual gamepad through pyvjoy.
 
 Servbot:
 -

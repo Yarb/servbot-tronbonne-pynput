@@ -3,6 +3,10 @@ Simple WebSocket solution for sharing a controller(emulated keyboard) to multipl
 
 This is a old version of the system that uses pynput and virtual keyboard. The main version is developed under name Servbot-Tronbonne and utilizes vJoy virtual gamepad through pyvjoy.
 
+**NOTE ON SECURITY**
+This system is experimental in nature and is intended to be used in highly controlled environment, for limited time and with constant monitoring. As such, the security of this system is limited and it potentially opens the keyboard on your server to the Internet. Take great care when deploying and limit the exposure of the systems involved to the Internet and observe the system if necessary.
+
+
 Servbot:
 -
 The Websocket server that Tronbonne-clients connect to. Includes a virtual keyboard mechanism to output given commands to game or whatnot.
